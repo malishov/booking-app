@@ -1,33 +1,41 @@
+// Package http wires together the HTTP router, middleware, and handlers.
 package http
 
 import (
-	"context"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/muradalishov/booking-app/internal/http/handlers"
+	"github.com/muradalishov/booking-app/internal/store"
+	"github.com/muradalishov/booking-app/web"
 )
 
-// Pinger is implemented by the database pool used for the health check.
-type Pinger interface {
-	Ping(ctx context.Context) error
-}
-
 // NewRouter wires up all HTTP routes and returns the root handler.
-func NewRouter(logger *slog.Logger, db Pinger) http.Handler {
+func NewRouter(logger *slog.Logger, pool *pgxpool.Pool, tmpl *template.Template) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
 	r.Use(requestLogger(logger))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
 
-	r.Method(http.MethodGet, "/health", handlers.NewHealth(db))
+	queries := store.New(pool)
+	authH := handlers.NewAuth(queries, tmpl, logger)
+
+	r.Method(http.MethodGet, "/health", handlers.NewHealth(pool))
+
+	r.Get("/register", authH.RegisterForm)
+	r.Post("/register", authH.Register)
+	r.Get("/login", authH.LoginForm)
+	r.Post("/login", authH.Login)
+
+	r.Handle("/static/*", http.FileServer(http.FS(web.StaticFS)))
 
 	return r
 }
