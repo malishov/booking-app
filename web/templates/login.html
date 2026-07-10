@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log in — Booking</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <main>
+        <h1>Log in</h1>
+        {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+        <form method="post" action="/login">
+            <label>Email
+                <input type="email" name="email" value="{{.Email}}" autocomplete="email" required>
+            </label>
+            <label>Password
+                <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit">Log in</button>
+        </form>
+        <p>No account yet? <a href="/register">Register</a></p>
+    </main>
+</body>
+</html>
