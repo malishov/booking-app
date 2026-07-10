@@ -1,3 +1,4 @@
+// Package db provides the pgx connection pool and goose migration runner.
 package db
 
 import (
