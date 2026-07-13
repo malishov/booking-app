@@ -1,3 +1,4 @@
+// Package main is the entry point for the booking-app HTTP server.
 package main
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/muradalishov/booking-app/internal/config"
 	"github.com/muradalishov/booking-app/internal/db"
 	httpserver "github.com/muradalishov/booking-app/internal/http"
+	"github.com/muradalishov/booking-app/web"
 )
 
 func main() {
@@ -45,9 +47,14 @@ func run(logger *slog.Logger) error {
 	defer pool.Close()
 	logger.Info("database connected")
 
+	tmpl, err := web.ParseTemplates()
+	if err != nil {
+		return err
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpserver.NewRouter(logger, pool),
+		Handler:           httpserver.NewRouter(logger, pool, tmpl),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
