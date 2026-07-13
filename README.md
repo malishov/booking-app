@@ -28,6 +28,97 @@ clients end up booked for the same slot.
 | Runtime       | Docker Compose                     |
 | CI            | GitHub Actions                     |
 
+## Domain model
+
+```mermaid
+erDiagram
+    USERS ||--o{ BUSINESSES : owns
+    USERS ||--o| EMPLOYEES : "logs in as"
+    BUSINESSES ||--o{ EMPLOYEES : employs
+    BUSINESSES ||--o{ SERVICES : offers
+    BUSINESSES ||--o{ CUSTOMERS : has
+    EMPLOYEES ||--o{ WORKING_HOURS : "works"
+    EMPLOYEES ||--o{ TIME_OFF : "is away"
+    EMPLOYEES ||--o{ EMPLOYEE_SERVICES : provides
+    SERVICES ||--o{ EMPLOYEE_SERVICES : "provided by"
+    EMPLOYEES ||--o{ BOOKINGS : serves
+    CUSTOMERS ||--o{ BOOKINGS : books
+    BOOKINGS ||--o{ BOOKING_ITEMS : contains
+    SERVICES ||--o{ BOOKING_ITEMS : "snapshotted in"
+
+    USERS {
+        bigint id PK
+        text email UK
+    }
+    BUSINESSES {
+        bigint id PK
+        bigint owner_user_id FK
+        text slug UK
+        text timezone
+    }
+    EMPLOYEES {
+        bigint id PK
+        bigint business_id FK
+        bigint user_id FK "nullable"
+    }
+    SERVICES {
+        bigint id PK
+        bigint business_id FK
+        int duration_minutes
+        int price_cents
+    }
+    EMPLOYEE_SERVICES {
+        bigint employee_id FK
+        bigint service_id FK
+        int price_cents_override "nullable"
+        int duration_minutes_override "nullable"
+    }
+    WORKING_HOURS {
+        bigint employee_id FK
+        smallint weekday "0=Mon..6=Sun"
+        time start_time
+        time end_time
+    }
+    TIME_OFF {
+        bigint employee_id FK
+        timestamptz starts_at
+        timestamptz ends_at
+    }
+    CUSTOMERS {
+        bigint id PK
+        bigint business_id FK
+        text phone
+    }
+    BOOKINGS {
+        bigint id PK
+        bigint employee_id FK
+        bigint customer_id FK
+        timestamptz starts_at
+        timestamptz ends_at
+        text status
+    }
+    BOOKING_ITEMS {
+        bigint id PK
+        bigint booking_id FK
+        bigint service_id FK "nullable"
+        text service_name "snapshot"
+        int price_cents "snapshot"
+    }
+```
+
+Two design choices keep the model flexible without over-engineering:
+
+- **`employee_services`** (many-to-many) records *which* employee performs *which*
+  service, with optional per-employee price/duration overrides.
+- **`booking_items`** lets one visit contain several services and **snapshots**
+  the name, price, and duration at booking time, so later price changes never
+  rewrite historical visits.
+
+Double booking is prevented by a PostgreSQL exclusion constraint on `bookings`:
+an employee cannot hold two active (non-cancelled) bookings whose time ranges
+overlap. The guarantee lives in the database, so concurrent requests cannot race
+past it.
+
 ## Layout
 
 ```
