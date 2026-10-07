@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>{{template "head"}}<title>{{t "Вход — Окно"}}</title></head>
+<body class="auth-page">
+    {{template "auth-aside"}}
+    <main class="auth-main">
+        <div class="auth-toolbar">{{template "language-picker"}}<nav class="auth-top" aria-label="{{t "Аккаунт"}}"><span>{{t "Пока нет аккаунта?"}}</span><a href="/register">{{t "Создать аккаунт"}} {{template "arrow"}}</a></nav></div>
+        <section class="form-section" aria-labelledby="form-title">
+            <div class="form-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M9 3v18M13 12h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+            <p class="eyebrow form-eyebrow">{{t "ЛИЧНЫЙ КАБИНЕТ МАСТЕРА"}}</p>
+            <h1 id="form-title">{{t "С возвращением."}}</h1>
+            <p class="form-description">{{t "Ваше дело начинается с одного входа."}}</p>
+            {{if .Error}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
+            <form method="post" action="/login" class="auth-form">
+                <div class="field"><label for="email">{{t "Электронная почта"}}</label><input id="email" type="email" name="email" value="{{.Email}}" placeholder="you@example.com" autocomplete="email" required></div>
+                <div class="field"><label for="password">{{t "Пароль"}}</label><div class="password-field"><input id="password" type="password" name="password" placeholder="{{t "Введите пароль"}}" autocomplete="current-password" required><button class="password-toggle" data-show-label="{{t "Показать пароль"}}" data-hide-label="{{t "Скрыть пароль"}}" type="button" aria-label="{{t "Показать пароль"}}" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button></div></div>
+                <button class="button button-primary" type="submit">{{t "Войти в кабинет"}} {{template "arrow"}}</button>
+            </form>
+            <div class="form-divider"><span></span><small>{{t "РАДЫ ВАС ВИДЕТЬ"}}</small><span></span></div>
+            <p class="form-bottom">{{t "Впервые здесь?"}} <a href="/register">{{t "Давайте знакомиться"}}</a></p>
+        </section>
+        <footer class="auth-footer"><span>© Окно, 2026</span><span>{{t "Больше времени для любимого дела."}}</span></footer>
+    </main>
+</body>
+</html>

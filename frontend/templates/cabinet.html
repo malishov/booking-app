@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>{{template "head"}}<title>{{t "Кабинет мастера — Окно"}}</title></head>
+<body class="cabinet-page">
+    <header class="cabinet-header">{{template "brand"}}<div class="header-account">{{template "language-picker"}}<span class="account-email">{{.Email}}</span><form method="post" action="/logout"><button class="button button-quiet" type="submit">{{t "Выйти"}} <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 4H5v16h4m6-12 4 4-4 4m-6-4h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></form></div></header>
+    <nav class="cabinet-tabs" aria-label="{{t "ЛИЧНЫЙ КАБИНЕТ"}}"><a href="/cabinet" aria-current="page">{{t "Ваша страница"}}</a><a href="/cabinet/services">{{t "Услуги и цены"}}</a></nav>
+    <main class="cabinet-main">
+        <div class="cabinet-heading"><div><p class="eyebrow">{{t "ЛИЧНЫЙ КАБИНЕТ"}}</p><h1>{{t "Ваше дело —"}}<br><em>{{t "в вашем ритме."}}</em></h1><p class="cabinet-intro">{{if .Business}}{{t "Ваша страница готова. Сделаем её ещё ближе к вам."}}{{else}}{{t "Начнём с вашей страницы. Расскажите клиентам о себе."}}{{end}}</p></div><span class="cabinet-flower" aria-hidden="true">✳</span></div>
+        {{if .NeedsBusiness}}{{if not .Business}}<div class="save-success" role="status">{{t "Сначала создайте страницу мастера, затем добавьте услуги."}}</div>{{end}}{{end}}
+        {{if .Saved}}<div class="save-success" role="status">{{template "check"}} {{t "Изменения сохранены. Ваша страница уже обновлена."}}</div>{{end}}
+        <section class="profile-layout" aria-labelledby="profile-title">
+            <div class="profile-panel" id="profile-editor">
+                <div class="profile-panel-heading"><span class="eyebrow">{{t "ШАГ 01 · ВАША СТРАНИЦА"}}</span>{{if .Business}}<span class="live-badge"><i class="status-dot"></i> {{t "Опубликована"}}</span>{{end}}</div>
+                <h2 id="profile-title">{{if .Business}}{{t "Ваша визитка."}}{{else}}{{t "Давайте знакомиться."}}{{end}}</h2>
+                <p class="profile-subtitle">{{t "Несколько деталей, чтобы клиенты нашли именно вас."}}</p>
+                {{if .Error}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
+                <form class="profile-form" method="post" action="/cabinet/business">
+                    <div class="field"><label for="business-name">{{t "Как вас представить?"}}</label><input id="business-name" name="name" value="{{.Form.Name}}" placeholder="{{t "Анна · маникюр и забота"}}" minlength="2" maxlength="100" required autocomplete="organization"><small class="field-hint">{{t "Ваше имя или название студии."}}</small></div>
+                    <div class="field"><label for="business-description">{{t "Немного о вашем деле "}}<span class="optional-label">{{t "необязательно"}}</span></label><textarea id="business-description" name="description" rows="4" maxlength="1000" placeholder="{{t "Что вы делаете, ваш подход и где принимаете клиентов."}}">{{.Form.Description}}</textarea><small class="field-hint">{{t "До 1000 символов. Это описание увидят ваши клиенты."}}</small></div>
+                    <div class="field"><label for="business-slug">{{t "Ваш личный адрес"}}</label><div class="slug-field"><span>/b/</span><input id="business-slug" name="slug" value="{{.Form.Slug}}" placeholder="anna-nails" minlength="3" maxlength="60" pattern="[a-z0-9]+(-[a-z0-9]+)*" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="slug-hint" required></div><small id="slug-hint" class="field-hint">{{t "Латинские буквы, цифры и дефисы."}}{{if .Business}} {{t "При изменении адреса старая ссылка перестанет работать."}}{{end}}</small></div>
+                    <div class="field"><label for="business-timezone">{{t "Часовой пояс"}}</label><select id="business-timezone" name="timezone" data-auto-timezone="{{if not .Business}}{{if not .Error}}true{{end}}{{end}}" required>{{range .Timezones}}<option value="{{.}}" {{if eq . $.Form.Timezone}}selected{{end}}>{{timezoneLabel .}}</option>{{end}}</select><small class="field-hint">{{t "Выберите место, где принимаете клиентов. Оно задаст время будущих записей."}}</small></div>
+                    <button class="button button-primary" type="submit">{{if .Business}}{{t "Сохранить изменения"}}{{else}}{{t "Создать мою страницу"}}{{end}} {{template "arrow"}}</button>
+                </form>
+            </div>
+            <aside class="profile-side">
+                {{if .Business}}
+                <div class="link-panel"><div class="link-panel-icon" aria-hidden="true">↗</div><p class="eyebrow">{{t "ВАША ЛИЧНАЯ ССЫЛКА"}}</p><h2>{{t "Вас уже можно найти."}}</h2><p>{{t "Отправьте ссылку в WhatsApp или Telegram — клиенты смогут познакомиться с вами."}}</p><a class="public-link" href="/b/{{.Business.Slug}}" data-public-link>/b/{{.Business.Slug}}</a><div class="link-actions"><a class="button button-primary" href="/b/{{.Business.Slug}}" target="_blank" rel="noopener">{{t "Посмотреть страницу"}} {{template "arrow"}}</a><button class="button button-quiet copy-link" type="button" hidden>{{t "Скопировать ссылку"}}</button></div><p data-success="{{t "Ссылка скопирована. Можно отправлять клиентам."}}" data-failure="{{t "Не удалось скопировать. Выделите ссылку и скопируйте вручную."}}" class="copy-status" role="status" aria-live="polite"></p></div>
+                {{else}}
+                <div class="link-panel"><div class="link-panel-icon" aria-hidden="true">✳</div><p class="eyebrow">{{t "ОДНА ССЫЛКА. ВАШЕ ДЕЛО."}}</p><h2>{{t "Маленькая страница."}}<br>{{t "Большое начало."}}</h2><p>{{t "Название и описание помогут клиентам познакомиться с вами. А личная ссылка станет вашей визиткой в мессенджерах."}}</p><div class="sample-link"><span>{{t "Ваша будущая ссылка"}}</span><strong>/b/anna-nails</strong></div></div>
+                {{end}}
+                <div class="profile-tip"><span class="tiny-star" aria-hidden="true">✳</span><p>{{t "Клиентам не нужен аккаунт."}}<br><span>{{t "Ваша страница открыта для всех по ссылке."}}</span></p></div>
+                <div class="profile-roadmap"><p class="eyebrow">{{t "СЛЕДУЮЩИЕ ШАГИ"}}</p><div><span class="step-number">02</span><p><strong>{{t "Услуги и цены"}}</strong><span>{{t "Что вы делаете и сколько это занимает."}}</span></p><a class="roadmap-link" href="/cabinet/services">{{t "Настроить"}}</a></div><div><span class="step-number">03</span><p><strong>{{t "Свободные окна"}}</strong><span>{{t "Рабочие дни, часы и перерывы."}}</span></p><span class="roadmap-soon">{{t "Скоро"}}</span></div></div>
+            </aside>
+        </section>
+    </main>
+    <footer class="cabinet-footer"><span>© Окно, 2026</span><span>{{t "Ваша работа. Ваш ритм."}}</span></footer>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>{{template "head"}}<title>{{t "Услуги и цены"}} — Окно</title></head>
+<body class="cabinet-page">
+<header class="cabinet-header">{{template "brand"}}<div class="header-account">{{template "language-picker"}}<span class="account-email">{{.Email}}</span><form action="/logout" method="post"><button class="button button-quiet" type="submit">{{t "Выйти"}}</button></form></div></header>
+<nav class="cabinet-tabs" aria-label="{{t "ЛИЧНЫЙ КАБИНЕТ"}}"><a href="/cabinet">{{t "Ваша страница"}}</a><a href="/cabinet/services" aria-current="page">{{t "Услуги и цены"}}</a></nav>
+<main class="cabinet-main services-main">
+    <div class="cabinet-heading"><div><p class="eyebrow">{{t "ШАГ 02 · УСЛУГИ И ЦЕНЫ"}}</p><h1>{{t "Ваши услуги."}}<br><em>{{t "С заботой о времени."}}</em></h1><p class="cabinet-intro">{{t "Понятные цены и длительность — меньше вопросов, больше доверия."}}</p></div><span class="cabinet-flower" aria-hidden="true">✳</span></div>
+    {{if .Saved}}<div class="save-success" role="status">{{template "check"}} {{t "Каталог обновлён."}}</div>{{end}}
+    <div class="services-layout">
+        <section class="profile-panel" id="service-editor" aria-labelledby="service-title"><p class="eyebrow">{{t "ВАШ КАТАЛОГ"}}</p><h2 id="service-title">{{if .EditingID}}{{t "Редактировать услугу"}}{{else}}{{t "Новая услуга"}}{{end}}</h2><p class="profile-subtitle">{{t "Расскажите, что вы предлагаете клиентам."}}</p>
+        {{if .Error}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
+        <form class="profile-form" method="post" action="{{if .EditingID}}/cabinet/services/{{.EditingID}}/edit{{else}}/cabinet/services{{end}}">
+            <div class="field"><label for="service-name">{{t "Название услуги"}}</label><input id="service-name" name="name" value="{{.Form.Name}}" placeholder="{{t "Маникюр с покрытием"}}" minlength="2" maxlength="100" required></div>
+            <div class="field"><label for="service-duration">{{t "Длительность, минуты"}}</label><input id="service-duration" name="duration" type="number" value="{{.Form.Duration}}" min="1" max="1440" step="1" required><small class="field-hint">{{t "Укажите всё время, которое нужно на услугу."}}</small></div>
+            <div class="service-price-fields"><div class="field"><label for="service-price">{{t "Цена"}}</label><input id="service-price" name="price" value="{{.Form.Price}}" inputmode="decimal" pattern="[0-9]{1,7}([.,][0-9]{1,2})?" placeholder="35.00" required></div><div class="field"><label for="service-currency">{{t "Валюта"}}</label><select id="service-currency" name="currency" required>{{range .Currencies}}<option value="{{.}}" {{if eq . $.Form.Currency}}selected{{end}}>{{.}}</option>{{end}}</select></div></div>
+            <small class="field-hint">{{t "Можно указать бесплатную услугу: 0.00."}}</small>
+            <button class="button button-primary" type="submit">{{if .EditingID}}{{t "Сохранить изменения"}}{{else}}{{t "Добавить услугу"}}{{end}} {{template "arrow"}}</button>
+            {{if .EditingID}}<a class="service-cancel" href="/cabinet/services">{{t "Отменить редактирование"}}</a>{{end}}
+        </form></section>
+        <section class="service-list-panel" id="service-list" aria-labelledby="catalog-title"><div class="section-heading"><h2 id="catalog-title">{{t "Услуги и цены"}}</h2><span class="coming-label">{{len .Services}} {{t "в каталоге"}}</span></div><p class="service-list-intro">{{t "Активные услуги видны на вашей публичной странице."}}</p>
+        {{range .Services}}<article class="service-card {{if not .IsActive}}service-hidden{{end}}"><div class="service-card-top"><span class="service-status">{{if .IsActive}}<i class="status-dot"></i> {{t "Активна"}}{{else}}{{t "Скрыта"}}{{end}}</span><strong class="service-price">{{.Price}} <small>{{.Currency}}</small></strong></div><h3>{{.Name}}</h3><p class="service-duration">{{.DurationMinutes}} {{t "мин"}}</p><div class="service-card-actions"><a href="/cabinet/services?edit={{.ID}}#service-editor">{{t "Редактировать"}} {{template "arrow"}}</a><form method="post" action="/cabinet/services/{{.ID}}/toggle"><button class="button button-quiet" type="submit">{{if .IsActive}}{{t "Скрыть"}}{{else}}{{t "Вернуть в каталог"}}{{end}}</button></form></div></article>
+        {{else}}<div class="services-empty"><span class="tiny-star" aria-hidden="true">✳</span><h3>{{t "Начните с любимой услуги."}}</h3><p>{{t "Добавьте первую услугу — она сразу появится на вашей странице."}}</p></div>{{end}}
+        <a class="service-preview-link" href="/b/{{.Business.Slug}}" target="_blank" rel="noopener">{{t "Посмотреть страницу"}} {{template "arrow"}}</a><p class="service-catalog-note">{{t "Скрытая услуга сохраняется в кабинете. Её можно вернуть в любой момент."}}</p></section>
+    </div>
+</main><footer class="cabinet-footer"><span>© Окно, 2026</span><span>{{t "Ваша работа. Ваш ритм."}}</span></footer>
+</body></html>

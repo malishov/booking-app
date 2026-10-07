@@ -122,13 +122,19 @@ past it.
 ## Layout
 
 ```
-cmd/server/      Entrypoint: the HTTP server
-internal/
-  config/        Configuration from environment variables
-  db/            pgx pool and migration runner
-  http/          Router (chi), middleware, handlers
-migrations/      goose SQL migrations (embedded via embed)
-web/             Static assets and HTML templates
+backend/
+  cmd/server/    HTTP server entrypoint
+  internal/
+    auth/        Password and session token helpers
+    config/      Configuration from environment variables
+    db/          pgx pool and migration runner
+    http/        Router, middleware, handlers
+    store/       sqlc queries and generated data access
+  migrations/    Embedded goose SQL migrations
+frontend/
+  templates/     HTML pages and shared template components
+  static/        CSS, JavaScript and favicon
+  assets.go      Embeds the frontend into the Go binary
 ```
 
 ## Quick start
@@ -154,8 +160,9 @@ Requires a running PostgreSQL instance.
 ```bash
 export DATABASE_URL="postgres://booking:booking@localhost:5432/booking?sslmode=disable"
 export HTTP_ADDR=":8080"   # optional, defaults to :8080
+export SESSION_COOKIE_SECURE=false # local HTTP only
 
-go run ./cmd/server
+go run ./backend/cmd/server
 ```
 
 Migrations are applied automatically on startup.
@@ -166,6 +173,47 @@ Migrations are applied automatically on startup.
 | -------------- | --------- | ------------------------------- |
 | `HTTP_ADDR`    | `:8080`   | Address the HTTP server binds   |
 | `DATABASE_URL` | *(none)*  | PostgreSQL connection string    |
+| `SESSION_COOKIE_SECURE` | `true` | HTTPS-only session cookie; set `false` for local HTTP |
+
+## Master authentication
+
+Register at `/register`, then log in at `/login`. Successful login creates a
+7-day database session and redirects to `/cabinet`. The cabinet requires an
+unexpired session. Use its logout button (`POST /logout`) to revoke the session.
+Clients booking an appointment will not need accounts.
+
+## Master page
+
+Create or edit the master profile in `/cabinet`: name, optional description,
+unique slug and IANA timezone. Each account owns one business page for this MVP.
+The public profile at `/b/{slug}` is accessible without login and exposes no
+owner account information. Changing the slug makes the old URL unavailable.
+Manage services at `/cabinet/services`: name, duration (1–1440 minutes), price
+and currency (AZN, AED, RUB, USD, EUR or GBP). Prices are stored in integer cents.
+Services can be edited, hidden and restored. Only active services appear on the
+public page; all private queries enforce the current business owner.
+Schedules and booking are the next development steps.
+
+The interface supports Russian, English and Azerbaijani. Language selection
+persists in a cookie; the Окно brand and user-supplied content are not translated.
+
+Profile saves always use the authenticated owner's ID. Slug uniqueness and the
+one-business-per-owner rule are enforced by PostgreSQL. Timezone rules are
+embedded into the binary for the minimal Docker runtime.
+
+To run database integration tests, set `TEST_DATABASE_URL` to a development
+PostgreSQL instance and run `go test ./...`. The test applies migrations inside
+an isolated schema and transaction, which is rolled back on completion.
+
+Session cookies are HttpOnly, SameSite=Lax, and Secure by default. The database
+stores only SHA-256 hashes of cryptographically random 32-byte tokens. Logging in
+again replaces and revokes the previous cookie's session. Cross-origin unsafe
+requests are rejected using Go's `http.CrossOriginProtection`.
+
+Docker Compose disables Secure cookies for local HTTP. Keep
+`SESSION_COOKIE_SECURE=true` behind HTTPS in production. Expired sessions cannot
+authenticate; old rows can be removed with
+`DELETE FROM sessions WHERE expires_at <= now();`.
 
 ## Development
 

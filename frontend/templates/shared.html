@@ -1,0 +1,38 @@
+{{define "brand"}}<a class="brand" href="/" aria-label="{{t "Окно — на главную"}}"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>окно<span class="brand-dot">.</span></a>{{end}}
+{{define "arrow"}}<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+{{define "check"}}<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 12 4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+{{define "auth-aside"}}
+<aside class="auth-aside">
+    {{template "brand"}}
+    <div class="aside-story">
+        <p class="eyebrow"><span class="tiny-star" aria-hidden="true">✳</span> {{t "МЕНЬШЕ ПЕРЕПИСОК. БОЛЬШЕ ДЕЛА."}}</p>
+        <h2>{{t "У каждого мастера"}}<br>{{t "есть своё "}}<em>{{t "окно."}}</em></h2>
+        <p class="aside-description">{{t "Пусть клиенты выбирают удобное время."}}<br>{{t "А вы — занимайтесь тем, что любите."}}</p>
+        <div class="booking-preview" aria-label="{{t "Пример будущей страницы записи"}}">
+            <div class="preview-top"><div class="studio-avatar" aria-hidden="true">м.</div><div><strong>{{t "Студия маникюра"}}</strong><span>{{t "Ваша страница записи"}}</span></div><span class="preview-label">{{t "ПРИМЕР"}}</span></div>
+            <div class="preview-service"><span>{{t "Маникюр с покрытием"}}</span><span>{{t "1 ч 30 мин"}}</span></div>
+            <div class="preview-date"><span>{{t "Выберите своё окно"}}</span><span aria-hidden="true">↗</span></div>
+            <div class="preview-slots" aria-hidden="true"><span>10:00</span><span class="slot-selected">12:30 {{template "check"}}</span><span>15:00</span></div>
+            <div class="preview-footer"><span class="status-dot"></span> {{t "Просто выбрать. Легко записаться."}}</div>
+        </div>
+        <div class="aside-note"><span class="note-line" aria-hidden="true"></span> {{t "Ваша работа. Ваш ритм."}}</div>
+    </div>
+    <footer class="aside-footer"><span>{{t "Создано для самостоятельных мастеров"}}</span><span aria-hidden="true">↗</span></footer>
+</aside>
+{{end}}
+{{define "language-picker"}}
+<form class="language-picker" action="/language" method="post">
+    <input type="hidden" name="return_to" value="{{currentPath}}">
+    <label class="visually-hidden" for="ui-language">{{t "Язык интерфейса"}}</label>
+    <select id="ui-language" name="language" class="language-select"><option value="ru" {{if eq lang "ru"}}selected{{end}}>Русский</option><option value="en" {{if eq lang "en"}}selected{{end}}>English</option><option value="az" {{if eq lang "az"}}selected{{end}}>Azərbaycanca</option></select>
+    <button class="language-apply button button-quiet" type="submit">{{t "Применить"}}</button>
+</form>
+{{end}}
+{{define "head"}}
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f4ef">
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/app.js" defer></script>
+{{end}}

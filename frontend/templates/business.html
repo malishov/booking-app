@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>{{template "head"}}<title>{{.Name}} — Окно</title><meta name="description" content="{{.Description}}"></head>
+<body class="public-page">
+    <header class="public-header">{{template "brand"}}{{template "language-picker"}}<span class="public-header-note">{{t "Личная страница мастера"}}</span></header>
+    <main class="public-main">
+        <section class="public-hero"><div class="public-hero-top"><span class="eyebrow">{{t "ПРИЯТНО ПОЗНАКОМИТЬСЯ"}}</span><span class="public-flower" aria-hidden="true">✳</span></div><h1>{{.Name}}</h1>{{if .Description}}<p class="public-description">{{.Description}}</p>{{else}}<p class="public-description muted">{{t "Рады видеть вас на моей странице."}}</p>{{end}}<div class="public-meta"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>{{t "Часовой пояс"}}: {{timezoneLabel .Timezone}}</span></div></section>
+        {{if .Services}}<section class="public-services" aria-labelledby="public-services-title"><div class="section-heading"><h2 id="public-services-title">{{t "Услуги и цены"}}</h2><span class="coming-label">{{t "ВЫБЕРИТЕ ТО, ЧТО ВАМ НУЖНО"}}</span></div>{{range .Services}}<article class="public-service-row"><div><h3>{{.Name}}</h3><span>{{.DurationMinutes}} {{t "мин"}}</span></div><strong>{{.Price}} <small>{{.Currency}}</small></strong></article>{{end}}</section>{{end}}
+<section class="booking-coming" aria-labelledby="booking-title"><span class="booking-coming-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 3v4M17 3v4M3 11h18M8 15h2M14 15h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><p class="eyebrow">{{t "СКОРО ЗДЕСЬ"}}</p><h2 id="booking-title">{{t "Ваше удобное время."}}</h2><p>{{t "Онлайн-запись пока недоступна."}}<br>{{t "Выбор свободного времени появится следующим шагом."}}</p><span class="booking-coming-note">{{t "Без регистрации. Просто выберите своё окно."}}</span></section>
+    </main>
+    <footer class="public-footer"><span>{{t "Страница создана в Окне"}}</span><span>{{t "Ваша работа. Ваш ритм."}}</span></footer>
+</body>
+</html>

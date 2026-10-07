@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>{{template "head"}}<title>{{t "Создать аккаунт — Окно"}}</title></head>
+<body class="auth-page">
+    {{template "auth-aside"}}
+    <main class="auth-main">
+        <div class="auth-toolbar">{{template "language-picker"}}<nav class="auth-top" aria-label="{{t "Аккаунт"}}"><span>{{t "Уже с нами?"}}</span><a href="/login">{{t "Войти"}} {{template "arrow"}}</a></nav></div>
+        <section class="form-section" aria-labelledby="form-title">
+            <div class="form-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M5.6 18.4 18.4 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+            <p class="eyebrow form-eyebrow">{{t "НАЧАЛО ВАШЕЙ ИСТОРИИ"}}</p>
+            <h1 id="form-title">{{t "Место для вашего дела."}}</h1>
+            <p class="form-description">{{t "Создайте аккаунт мастера."}}<br>{{t "Всё начинается с почты и пароля."}}</p>
+            {{if .Error}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
+            <form method="post" action="/register" class="auth-form">
+                <div class="field"><label for="email">{{t "Электронная почта"}}</label><input id="email" type="email" name="email" value="{{.Email}}" placeholder="you@example.com" autocomplete="email" required></div>
+                <div class="field"><label for="password">{{t "Придумайте пароль"}}</label><div class="password-field"><input id="password" type="password" name="password" placeholder="{{t "Не менее 8 символов"}}" autocomplete="new-password" minlength="8" aria-describedby="password-hint" required><button class="password-toggle" data-show-label="{{t "Показать пароль"}}" data-hide-label="{{t "Скрыть пароль"}}" type="button" aria-label="{{t "Показать пароль"}}" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button></div><small class="field-hint" id="password-hint">{{t "Используйте минимум 8 символов."}}</small></div>
+                <button class="button button-primary" type="submit">{{t "Создать аккаунт"}} {{template "arrow"}}</button>
+            </form>
+            <p class="registration-note">{{t "Это аккаунт для мастера. Вашим клиентам"}}<br>{{t "регистрироваться не потребуется."}}</p>
+            <div class="form-divider"><span></span><small>{{t "ПРОСТО ПЕРВЫЙ ШАГ"}}</small><span></span></div>
+            <p class="form-bottom">{{t "Уже есть аккаунт?"}} <a href="/login">{{t "С возвращением"}}</a></p>
+        </section>
+        <footer class="auth-footer"><span>© Окно, 2026</span><span>{{t "Больше времени для любимого дела."}}</span></footer>
+    </main>
+</body>
+</html>
