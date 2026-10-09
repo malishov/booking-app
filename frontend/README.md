@@ -1,14 +1,18 @@
 # Frontend
 
-Russian-language HTML pages, shared Go template components, local CSS and small
+Localized HTML pages, shared Go template components, local CSS and small
 progressive JavaScript enhancements. No separate frontend server or build step
 is required. `assets.go` embeds these files into the backend executable.
 
 - `templates/shared.html`: common head, branding, icons and auth illustration.
 - `templates/login.html`, `register.html`: master authentication forms.
 - `templates/cabinet.html`: authenticated profile editor, public link and next steps.
+- `templates/schedule.html`: weekly hours, daily breaks and extra days off.
 - `templates/services.html`: service catalog with create, edit, hide and restore.
-- `templates/business.html`, `not-found.html`: public master profile and missing page.
+- `templates/online.html`: live public booking flow and confirmation.
+- `templates/bookings.html`: private appointment list for the master.
+- `templates/not-found.html`: missing page.
+- `templates/business.html`: earlier profile-only template.
 - `static/style.css`: shared styles and responsive layouts.
 - `static/app.js`: password toggle, copy link and initial timezone suggestion.
 - `locales/en.json`, `az.json`: English and Azerbaijani catalogs; Russian is the source language.
@@ -20,7 +24,7 @@ never automatically translated.
 
 Forms submit directly to backend routes and remain usable without JavaScript.
 The example booking card is illustrative. Active services and prices appear on
-the public master page; schedules and booking are not implemented yet.
+the public master page; weekly schedules determine public slots; confirmed bookings appear in the private appointment list.
 
 Run from the repository root: `docker compose up --build -d`. Frontend files are
 embedded at build time, so rebuild after changing them. Go's module and shared

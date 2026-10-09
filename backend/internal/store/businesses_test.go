@@ -144,4 +144,57 @@ func TestBusinessPersistence(t *testing.T) {
 	if err != nil || len(publicServices) != 1 {
 		t.Fatal("restored service not public")
 	}
+	// Weekly settings persist atomically and cannot be read or written by an owner
+	// without a business. The surrounding transaction rolls all test data back.
+	rawSchedule := []byte(`{"Days":[{"Index":0,"Enabled":true,"Start":"09:00","End":"18:00"}],"DaysOff":"2026-12-31"}`)
+	if err := queries.SaveSchedule(ctx, owner.ID, rawSchedule); err != nil {
+		t.Fatal(err)
+	}
+	storedSchedule, err := queries.GetSchedule(ctx, owner.ID)
+	if err != nil || !strings.Contains(string(storedSchedule), "2026-12-31") {
+		t.Fatal("schedule did not persist")
+	}
+	if err := queries.SaveSchedule(ctx, other.ID, rawSchedule); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("other owner wrote a schedule")
+	}
+	if _, err := queries.GetSchedule(ctx, other.ID); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("other owner read a schedule")
+	}
+	start := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Minute)
+	if err := queries.InsertBooking(ctx, created, updatedService, "Анна", "+994501234567", "receipt-test", start); err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := queries.GetReceipt(ctx, created.ID, "receipt-test")
+	if err != nil || receipt.PriceCents != 4099 || receipt.Duration != 100 || receipt.Name != "" || receipt.Phone != "" {
+		t.Fatal("receipt snapshot or privacy failed")
+	}
+	conflictTx, err := tx.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = New(conflictTx).InsertBooking(ctx, created, updatedService, "Другой клиент", "+994501234568", "conflict-test", start.Add(15*time.Minute))
+	if !errors.As(err, &pgErr) || pgErr.Code != "23P01" {
+		t.Fatalf("overlap accepted: %v", err)
+	}
+	if err := conflictTx.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := queries.InsertBooking(ctx, created, updatedService, "Следующий клиент", "+994501234569", "adjacent-test", start.Add(100*time.Minute)); err != nil {
+		t.Fatalf("adjacent booking rejected: %v", err)
+	}
+	if _, err := queries.UpdateService(ctx, UpdateServiceParams{ID: service.ID, OwnerUserID: owner.ID, Name: "New service", DurationMinutes: 30, PriceCents: 9900, Currency: "USD"}); err != nil {
+		t.Fatal(err)
+	}
+	receipt, err = queries.GetReceipt(ctx, created.ID, "receipt-test")
+	if err != nil || receipt.PriceCents != 4099 || receipt.Duration != 100 || receipt.Currency != "AZN" {
+		t.Fatal("historical snapshot changed")
+	}
+	owned, err := queries.ListOwnerBookings(ctx, owner.ID)
+	if err != nil || len(owned) != 2 {
+		t.Fatal("owner bookings missing")
+	}
+	foreign, err := queries.ListOwnerBookings(ctx, other.ID)
+	if err != nil || len(foreign) != 0 {
+		t.Fatal("private bookings leaked")
+	}
 }

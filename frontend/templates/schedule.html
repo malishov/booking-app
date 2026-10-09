@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>{{template "head"}}<title>{{t "Расписание"}} — Окно</title></head>
+<body class="cabinet-page">
+<header class="cabinet-header">{{template "brand"}}<div class="header-account">{{template "language-picker"}}<span class="account-email">{{.Email}}</span><form action="/logout" method="post"><button class="button button-quiet">{{t "Выйти"}}</button></form></div></header>
+<nav class="cabinet-tabs" aria-label="{{t "ЛИЧНЫЙ КАБИНЕТ"}}"><a href="/cabinet">{{t "Ваша страница"}}</a><a href="/cabinet/services">{{t "Услуги и цены"}}</a><a href="/cabinet/schedule" aria-current="page">{{t "Расписание"}}</a><a href="/cabinet/bookings">{{t "Записи"}}</a></nav>
+<main class="cabinet-main schedule-main">
+<div class="cabinet-heading"><div><p class="eyebrow">{{t "ШАГ 03 · ВАШЕ ВРЕМЯ"}}</p><h1>{{t "Время для работы."}}<br><em>{{t "И для себя."}}</em></h1><p class="cabinet-intro">{{t "Задайте свой ритм: рабочие дни, перерывы и выходные."}}</p></div><span class="cabinet-flower" aria-hidden="true">✳</span></div>
+{{if .Saved}}<div class="save-success" role="status">{{template "check"}} {{t "Расписание сохранено."}}</div>{{end}}
+{{if .Error}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
+<form method="post" action="/cabinet/schedule" class="schedule-layout">
+<section class="profile-panel schedule-week"><div class="section-heading"><div><p class="eyebrow">{{t "НЕДЕЛЯ В ВАШЕМ РИТМЕ"}}</p><h2>{{t "Рабочие дни"}}</h2></div><span class="coming-label">{{t "Повторяется каждую неделю"}}</span></div><p class="profile-subtitle">{{t "Включите дни, в которые принимаете клиентов."}}</p>
+{{range .Days}}<fieldset class="schedule-row"><legend class="sr-only">{{t .Name}}</legend><div class="schedule-day"><label class="schedule-switch"><input type="checkbox" name="day_{{.Index}}_enabled" {{if .Enabled}}checked{{end}}><span class="schedule-toggle" aria-hidden="true"></span><strong>{{t .Name}}</strong></label><small class="schedule-day-status" data-open="{{t "Приём клиентов"}}" data-closed="{{t "Выходной"}}">{{if .Enabled}}{{t "Приём клиентов"}}{{else}}{{t "Выходной"}}{{end}}</small></div><div class="schedule-times"><div class="field"><label for="day-{{.Index}}-start">{{t "Начало"}}</label><input id="day-{{.Index}}-start" type="time" name="day_{{.Index}}_start" value="{{.Start}}" step="60"></div><span class="schedule-dash" aria-hidden="true">—</span><div class="field"><label for="day-{{.Index}}-end">{{t "Конец"}}</label><input id="day-{{.Index}}-end" type="time" name="day_{{.Index}}_end" value="{{.End}}" step="60"></div></div><div class="schedule-times schedule-break"><div class="field"><label for="day-{{.Index}}-break-start">{{t "Перерыв с"}}</label><input id="day-{{.Index}}-break-start" type="time" name="day_{{.Index}}_break_start" value="{{.BreakStart}}" step="60"></div><span class="schedule-dash" aria-hidden="true">—</span><div class="field"><label for="day-{{.Index}}-break-end">{{t "До"}}</label><input id="day-{{.Index}}-break-end" type="time" name="day_{{.Index}}_break_end" value="{{.BreakEnd}}" step="60"></div></div></fieldset>{{end}}
+<p class="field-hint schedule-hint">{{t "Без перерыва? Оставьте оба поля пустыми. Выключенный день закрыт для записи."}}</p><button class="button button-primary" type="submit">{{t "Сохранить расписание"}} {{template "arrow"}}</button></section>
+<aside class="schedule-aside"><section class="schedule-note"><span class="tiny-star" aria-hidden="true">✳</span><p class="eyebrow">{{t "ВАШ ЧАСОВОЙ ПОЯС"}}</p><h2>{{t "Всё в вашем времени."}}</h2><p class="schedule-zone">{{timezoneLabel .Business.Timezone}}</p><p>{{t "Рабочие часы и даты выходных указаны по времени мастера."}}</p><a href="/cabinet#profile-editor">{{t "Изменить часовой пояс"}} →</a></section>
+<section class="profile-panel days-off-panel"><p class="eyebrow">{{t "ПЛАНЫ ВНЕ РАБОТЫ"}}</p><h2>{{t "Отдельные выходные"}}</h2><p class="profile-subtitle">{{t "Отпуск, праздник или день для себя — эти даты перекроют обычное расписание."}}</p>
+<div class="days-off-widget" data-today="{{.CalendarToday}}" data-empty="{{t "Выходные пока не выбраны."}}" data-remove="{{t "Убрать дату"}}" data-limit="{{t "Можно указать не больше 100 отдельных выходных."}}" data-unsaved="{{t "Есть несохранённые изменения."}}">
+<div class="days-off-picker" hidden>
+<div class="days-off-calendar-head"><button type="button" data-off-prev aria-label="{{t "Предыдущий месяц"}}">←</button><h3 class="days-off-month" aria-live="polite"></h3><button type="button" data-off-next aria-label="{{t "Следующий месяц"}}">→</button></div>
+<div class="calendar-weekdays" aria-hidden="true"><span>{{t "Пн"}}</span><span>{{t "Вт"}}</span><span>{{t "Ср"}}</span><span>{{t "Чт"}}</span><span>{{t "Пт"}}</span><span>{{t "Сб"}}</span><span>{{t "Вс"}}</span></div>
+<div class="calendar-grid days-off-grid" aria-label="{{t "Даты без приёма"}}"></div>
+<p class="field-hint">{{t "Нажмите на дату, чтобы отметить выходной. Нажмите ещё раз, чтобы снять отметку."}}</p>
+<h3 class="days-off-list-title">{{t "Выбранные выходные"}}</h3><div class="days-off-selected"></div>
+<p class="days-off-status" role="status" aria-live="polite"></p>
+</div>
+<div class="field days-off-fallback"><label for="days-off">{{t "Даты без приёма"}}</label><textarea id="days-off" name="days_off" rows="5" placeholder="2026-12-31&#10;2027-01-01">{{.DaysOff}}</textarea><small class="field-hint">{{t "ГГГГ-ММ-ДД, каждая дата с новой строки. До 100 дат."}}</small></div>
+<p class="field-hint">{{t "Выходные применятся после сохранения расписания. Существующие записи не отменяются."}}</p>
+<button type="submit" class="button button-primary days-off-save">{{t "Сохранить расписание"}} {{template "arrow"}}</button>
+</div>
+</section><p class="service-catalog-note">{{t "Выходные закрывают даты для новых онлайн-записей."}}</p></aside>
+</form></main><footer class="cabinet-footer"><span>© Окно, 2026</span><span>{{t "Ваша работа. Ваш ритм."}}</span></footer>
+</body></html>

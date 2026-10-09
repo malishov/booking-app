@@ -192,7 +192,8 @@ Manage services at `/cabinet/services`: name, duration (1–1440 minutes), price
 and currency (AZN, AED, RUB, USD, EUR or GBP). Prices are stored in integer cents.
 Services can be edited, hidden and restored. Only active services appear on the
 public page; all private queries enforce the current business owner.
-Schedules and booking are the next development steps.
+Schedules and online booking are available. Calendar selection for extra days
+off, appointment cancellation and notifications are the next development steps.
 
 The interface supports Russian, English and Azerbaijani. Language selection
 persists in a cookie; the Окно brand and user-supplied content are not translated.
@@ -222,3 +223,43 @@ go test ./...        # tests
 golangci-lint run    # linter
 go build ./...       # build
 ```
+
+
+### Master schedule
+
+`/cabinet/schedule` configures weekly hours (Monday–Sunday), one optional
+break per day, and up to 100 date-specific days off. New schedules start closed.
+Times and dates use the business time zone. Overnight shifts are not supported.
+Date-specific days off can be toggled in a monthly calendar and removed from the
+selected date list. Changes apply after saving the schedule; existing bookings
+are not cancelled. Without JavaScript, dates can still be entered as text.
+Migration 00005 stores business-level settings in `master_schedules`; owner-scoped
+queries replace the schedule atomically. Employee-level `working_hours` and
+`time_off` remain reserved for future multi-employee support.
+Client slot calculation and booking are implemented as described below.
+
+
+### Online booking
+
+Visitors choose an active service and date at `/b/{slug}`, then a free start time,
+name and phone. No client account is required. Times use the business time zone.
+Slots are spaced 15 minutes from shift start, within a 60-day horizon; the full
+service must fit around breaks, days off and existing visits. Overnight shifts
+are not supported. A public page starts closed until the owner saves working hours.
+The public calendar marks only dates with at least one suitable slot as available.
+Changing the service recalculates date availability. Initial visits select the
+first available day; explicit date choices are preserved. With JavaScript off,
+all supported months and the service refresh button remain usable.
+
+`POST /b/{slug}/book` locks the business and rechecks the active service,
+schedule and occupied times in a transaction. The existing PostgreSQL exclusion
+constraint prevents overlapping active visits. A canonical solo employee is
+created automatically. Client, visit and price/name/duration/currency snapshots
+commit together. Migration 00006 adds the solo employee index, currency snapshot
+and opaque receipt hash.
+
+Success redirects to an unguessable confirmation URL. This page exposes only
+appointment details, not client name or phone. The owner sees the latest 200
+appointments at `/cabinet/bookings`; other owners cannot access them.
+Notifications, cancellation, rescheduling and multi-employee booking remain
+future work. Date selection for extra days off is a planned UX improvement.

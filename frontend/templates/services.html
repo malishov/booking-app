@@ -3,7 +3,7 @@
 <head>{{template "head"}}<title>{{t "Услуги и цены"}} — Окно</title></head>
 <body class="cabinet-page">
 <header class="cabinet-header">{{template "brand"}}<div class="header-account">{{template "language-picker"}}<span class="account-email">{{.Email}}</span><form action="/logout" method="post"><button class="button button-quiet" type="submit">{{t "Выйти"}}</button></form></div></header>
-<nav class="cabinet-tabs" aria-label="{{t "ЛИЧНЫЙ КАБИНЕТ"}}"><a href="/cabinet">{{t "Ваша страница"}}</a><a href="/cabinet/services" aria-current="page">{{t "Услуги и цены"}}</a></nav>
+<nav class="cabinet-tabs" aria-label="{{t "ЛИЧНЫЙ КАБИНЕТ"}}"><a href="/cabinet">{{t "Ваша страница"}}</a><a href="/cabinet/services" aria-current="page">{{t "Услуги и цены"}}</a><a href="/cabinet/schedule">{{t "Расписание"}}</a><a href="/cabinet/bookings">{{t "Записи"}}</a></nav>
 <main class="cabinet-main services-main">
     <div class="cabinet-heading"><div><p class="eyebrow">{{t "ШАГ 02 · УСЛУГИ И ЦЕНЫ"}}</p><h1>{{t "Ваши услуги."}}<br><em>{{t "С заботой о времени."}}</em></h1><p class="cabinet-intro">{{t "Понятные цены и длительность — меньше вопросов, больше доверия."}}</p></div><span class="cabinet-flower" aria-hidden="true">✳</span></div>
     {{if .Saved}}<div class="save-success" role="status">{{template "check"}} {{t "Каталог обновлён."}}</div>{{end}}

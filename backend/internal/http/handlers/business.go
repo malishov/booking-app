@@ -71,7 +71,7 @@ func (b *Business) Cabinet(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	data := businessPageData{Email: user.Email, Form: businessForm{Timezone: "UTC"}, Saved: r.URL.Query().Get("saved") == "1", NeedsBusiness: r.URL.Query().Get("setup") == "services"}
+	data := businessPageData{Email: user.Email, Form: businessForm{Timezone: "UTC"}, Saved: r.URL.Query().Get("saved") == "1", NeedsBusiness: r.URL.Query().Get("setup") == "services" || r.URL.Query().Get("setup") == "schedule"}
 	profile, err := b.store.GetBusinessByOwner(r.Context(), user.ID)
 	if err == nil {
 		data.Business = &profile

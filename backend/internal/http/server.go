@@ -30,6 +30,8 @@ func NewRouter(logger *slog.Logger, pool *pgxpool.Pool, tmpl *template.Template,
 	authH := handlers.NewAuth(queries, queries, tmpl, logger, secureCookie)
 	businessH := handlers.NewBusiness(queries, tmpl, logger)
 	servicesH := handlers.NewServices(queries, tmpl, logger)
+	scheduleH := handlers.NewSchedule(queries, tmpl, logger)
+	bookingH := handlers.NewBooking(pool, tmpl, logger)
 
 	r.Method(http.MethodGet, "/health", handlers.NewHealth(pool))
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -44,12 +46,17 @@ func NewRouter(logger *slog.Logger, pool *pgxpool.Pool, tmpl *template.Template,
 	r.Post("/language", handlers.SetLanguage(secureCookie))
 	r.With(authH.RequireSession).Get("/cabinet", businessH.Cabinet)
 	r.With(authH.RequireSession).Post("/cabinet/business", businessH.SaveProfile)
-	r.Get("/b/{slug}", businessH.PublicPage)
+	r.Get("/b/{slug}", bookingH.Page)
+	r.Post("/b/{slug}/book", bookingH.Create)
+	r.Get("/b/{slug}/booked/{token}", bookingH.Receipt)
+	r.With(authH.RequireSession).Get("/cabinet/bookings", bookingH.Cabinet)
 	r.With(authH.RequireSession).Get("/cabinet/services", servicesH.Page)
 	r.With(authH.RequireSession).Post("/cabinet/services", servicesH.Save)
 	r.With(authH.RequireSession).Post("/cabinet/services/{id}/edit", servicesH.Save)
 	r.With(authH.RequireSession).Post("/cabinet/services/{id}/toggle", servicesH.Toggle)
 
+	r.With(authH.RequireSession).Get("/cabinet/schedule", scheduleH.Page)
+	r.With(authH.RequireSession).Post("/cabinet/schedule", scheduleH.Save)
 	r.Handle("/static/*", http.FileServer(http.FS(frontend.StaticFS)))
 
 	return r

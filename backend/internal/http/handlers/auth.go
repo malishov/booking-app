@@ -152,6 +152,9 @@ func renderHTML(w http.ResponseWriter, r *http.Request, tmpl *template.Template,
 	language := requestLanguage(r)
 	w.Header().Set("Content-Language", language)
 	path := r.URL.RequestURI()
+	if r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/b/") && strings.HasSuffix(r.URL.Path, "/book") {
+		path = strings.TrimSuffix(r.URL.Path, "/book")
+	}
 	if r.URL.Path == "/cabinet/business" {
 		path = "/cabinet"
 	}

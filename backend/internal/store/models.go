@@ -9,14 +9,15 @@ import (
 )
 
 type Booking struct {
-	ID         int64              `json:"id"`
-	BusinessID int64              `json:"business_id"`
-	EmployeeID int64              `json:"employee_id"`
-	CustomerID int64              `json:"customer_id"`
-	StartsAt   pgtype.Timestamptz `json:"starts_at"`
-	EndsAt     pgtype.Timestamptz `json:"ends_at"`
-	Status     string             `json:"status"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ID          int64              `json:"id"`
+	BusinessID  int64              `json:"business_id"`
+	EmployeeID  int64              `json:"employee_id"`
+	CustomerID  int64              `json:"customer_id"`
+	StartsAt    pgtype.Timestamptz `json:"starts_at"`
+	EndsAt      pgtype.Timestamptz `json:"ends_at"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ReceiptHash pgtype.Text        `json:"receipt_hash"`
 }
 
 type BookingItem struct {
@@ -26,6 +27,7 @@ type BookingItem struct {
 	ServiceName     string      `json:"service_name"`
 	PriceCents      int32       `json:"price_cents"`
 	DurationMinutes int32       `json:"duration_minutes"`
+	Currency        string      `json:"currency"`
 }
 
 type Business struct {
@@ -61,6 +63,12 @@ type EmployeeService struct {
 	ServiceID               int64       `json:"service_id"`
 	PriceCentsOverride      pgtype.Int4 `json:"price_cents_override"`
 	DurationMinutesOverride pgtype.Int4 `json:"duration_minutes_override"`
+}
+
+type MasterSchedule struct {
+	BusinessID int64              `json:"business_id"`
+	Settings   []byte             `json:"settings"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Service struct {
