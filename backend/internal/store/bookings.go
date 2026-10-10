@@ -26,8 +26,8 @@ func (q *Queries) ChangeBookingStatus(ctx context.Context, owner, id int64, stat
 }
 
 func (q *Queries) ListManagedBookings(ctx context.Context, owner int64, filter string, now, today, tomorrow time.Time) ([]BookingView, error) {
-	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,c.name,COALESCE(c.phone,''),i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
- FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN customers c ON c.id=b.customer_id JOIN booking_items i ON i.booking_id=b.id
+	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+ FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN booking_items i ON i.booking_id=b.id
  WHERE p.owner_user_id=$1 AND (
  ($2='today' AND b.starts_at>=$4 AND b.starts_at<$5) OR
  ($2='upcoming' AND b.ends_at>$3 AND b.status='confirmed') OR
@@ -57,8 +57,8 @@ type BookingView struct {
 }
 
 func (q *Queries) ListOwnerDayBookings(ctx context.Context, owner int64, start, end time.Time) ([]BookingView, error) {
-	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,c.name,COALESCE(c.phone,''),i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
- FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN customers c ON c.id=b.customer_id JOIN booking_items i ON i.booking_id=b.id
+	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+ FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN booking_items i ON i.booking_id=b.id
  WHERE p.owner_user_id=$1 AND b.starts_at<$3 AND b.ends_at>$2 ORDER BY b.starts_at,b.id`, owner, start, end)
 	if err != nil {
 		return nil, err
@@ -101,8 +101,8 @@ func (q *Queries) ListBusyExcept(ctx context.Context, business int64, start, end
 
 func (q *Queries) GetOwnerBooking(ctx context.Context, owner, id int64) (BookingView, error) {
 	var v BookingView
-	err := q.db.QueryRow(ctx, `SELECT b.id,b.starts_at,b.ends_at,c.name,COALESCE(c.phone,''),i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
- FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN customers c ON c.id=b.customer_id JOIN booking_items i ON i.booking_id=b.id
+	err := q.db.QueryRow(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+ FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN booking_items i ON i.booking_id=b.id
  WHERE p.owner_user_id=$1 AND b.id=$2`, owner, id).
 		Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status)
 	return v, err
@@ -149,14 +149,16 @@ func (q *Queries) InsertBooking(ctx context.Context, b Business, s Service, name
 	if err != nil {
 		return err
 	}
+	// A shared or unverified phone must not rename or merge existing clients.
+	// A future owner-driven merge may link customers; visit snapshots stay intact.
 	err = q.db.QueryRow(ctx, `INSERT INTO customers(business_id,name,phone) VALUES($1,$2,$3)
- ON CONFLICT(business_id,phone) WHERE phone IS NOT NULL DO UPDATE SET name=EXCLUDED.name RETURNING id`, b.ID, name, phone).Scan(&customer)
+ RETURNING id`, b.ID, name, phone).Scan(&customer)
 	if err != nil {
 		return err
 	}
 	end := start.Add(time.Duration(s.DurationMinutes) * time.Minute)
-	err = q.db.QueryRow(ctx, `INSERT INTO bookings(business_id,employee_id,customer_id,starts_at,ends_at,status,receipt_hash)
- VALUES($1,$2,$3,$4,$5,'confirmed',$6) RETURNING id`, b.ID, employee, customer, start, end, hash).Scan(&booking)
+	err = q.db.QueryRow(ctx, `INSERT INTO bookings(business_id,employee_id,customer_id,starts_at,ends_at,status,receipt_hash,client_name,client_phone)
+ VALUES($1,$2,$3,$4,$5,'confirmed',$6,$7,$8) RETURNING id`, b.ID, employee, customer, start, end, hash, name, phone).Scan(&booking)
 	if err != nil {
 		return err
 	}
@@ -172,8 +174,8 @@ func (q *Queries) GetReceipt(ctx context.Context, business int64, hash string) (
 	return v, err
 }
 func (q *Queries) ListOwnerBookings(ctx context.Context, owner int64) ([]BookingView, error) {
-	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,c.name,COALESCE(c.phone,''),i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
- FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN customers c ON c.id=b.customer_id
+	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+ FROM bookings b JOIN businesses p ON p.id=b.business_id
  JOIN booking_items i ON i.booking_id=b.id WHERE p.owner_user_id=$1 ORDER BY b.starts_at DESC LIMIT 200`, owner)
 	if err != nil {
 		return nil, err

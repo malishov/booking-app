@@ -93,6 +93,8 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         bigint customer_id FK
+        text client_name "snapshot"
+        text client_phone "snapshot"
         timestamptz starts_at
         timestamptz ends_at
         text status
@@ -257,6 +259,15 @@ constraint prevents overlapping active visits. A canonical solo employee is
 created automatically. Client, visit and price/name/duration/currency snapshots
 commit together. Migration 00006 adds the solo employee index, currency snapshot
 and opaque receipt hash.
+
+Migration 00007 snapshots the client's name and phone on each visit. Cabinet
+lists, calendar details and rescheduling read these snapshots rather than the
+customer directory. A public or manual booking creates a separate customer
+record; an unverified/shared phone never automatically merges people or renames
+an existing client. Explicit owner-driven customer merging is future work.
+Existing visits are backfilled from the current directory; names overwritten
+before this migration cannot be reconstructed. Downgrading to phone uniqueness
+requires shared-phone customer records to be explicitly resolved first.
 
 Success redirects to an unguessable confirmation URL. This page exposes only
 appointment details, not client name or phone. The owner manages appointments

@@ -18,6 +18,8 @@ type Booking struct {
 	Status      string             `json:"status"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	ReceiptHash pgtype.Text        `json:"receipt_hash"`
+	ClientName  string             `json:"client_name"`
+	ClientPhone string             `json:"client_phone"`
 }
 
 type BookingItem struct {
