@@ -197,4 +197,120 @@ func TestBusinessPersistence(t *testing.T) {
 	if err != nil || len(foreign) != 0 {
 		t.Fatal("private bookings leaked")
 	}
+	// Owner isolation, allowed transitions and availability after cancellation.
+	dayRows, err := queries.ListOwnerDayBookings(ctx, owner.ID, start, start.Add(100*time.Minute))
+	if err != nil || len(dayRows) != 1 || dayRows[0].ID != receipt.ID {
+		t.Fatal("day interval boundaries incorrect")
+	}
+	foreignDay, err := queries.ListOwnerDayBookings(ctx, other.ID, start, start.Add(100*time.Minute))
+	if err != nil || len(foreignDay) != 0 {
+		t.Fatal("day calendar leaked to another owner")
+	}
+	now := start.Add(-time.Hour)
+	// Rescheduling preserves the snapshot and receipt, releases the old window,
+	// rejects foreign/stale/past requests and keeps the exclusion constraint.
+	if _, err := queries.GetOwnerBooking(ctx, other.ID, receipt.ID); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("foreign owner read reschedule details")
+	}
+	if err := queries.RescheduleBooking(ctx, other.ID, receipt.ID, start, start.Add(24*time.Hour), now); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("foreign owner rescheduled visit")
+	}
+	if err := queries.RescheduleBooking(ctx, owner.ID, receipt.ID, start, start.Add(24*time.Hour), start); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("started visit rescheduled")
+	}
+	if err := queries.RescheduleBooking(ctx, owner.ID, receipt.ID, start, now, now); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("visit moved to past")
+	}
+	withoutSelf, err := queries.ListBusyExcept(ctx, created.ID, start, start.Add(100*time.Minute), receipt.ID)
+	if err != nil || len(withoutSelf) != 0 {
+		t.Fatal("own visit blocks reschedule choices")
+	}
+	conflictTx, err = tx.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = New(conflictTx).RescheduleBooking(ctx, owner.ID, receipt.ID, start, start.Add(100*time.Minute), now)
+	if !errors.As(err, &pgErr) || pgErr.Code != "23P01" {
+		t.Fatalf("overlapping move accepted: %v", err)
+	}
+	if err := conflictTx.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	moved := start.Add(24 * time.Hour)
+	if err := queries.RescheduleBooking(ctx, owner.ID, receipt.ID, start, moved, now); err != nil {
+		t.Fatal(err)
+	}
+	current, err := queries.GetReceipt(ctx, created.ID, "receipt-test")
+	if err != nil || !current.Start.Equal(moved) || !current.End.Equal(moved.Add(100*time.Minute)) || current.PriceCents != 4099 || current.Currency != "AZN" || current.ServiceName != "Маникюр с покрытием" {
+		t.Fatal("reschedule changed snapshot or receipt")
+	}
+	oldBusy, err := queries.ListBusy(ctx, created.ID, start, start.Add(100*time.Minute))
+	if err != nil || len(oldBusy) != 0 {
+		t.Fatal("old slot still occupied after move")
+	}
+	if err := queries.RescheduleBooking(ctx, owner.ID, receipt.ID, start, moved.Add(time.Hour), now); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("stale move overwrote newer visit")
+	}
+	if err := queries.RescheduleBooking(ctx, owner.ID, receipt.ID, moved, start, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := queries.ChangeBookingStatus(ctx, other.ID, receipt.ID, "cancelled", now); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("foreign owner changed booking")
+	}
+	for _, status := range []string{"completed", "no_show", "confirmed", "invalid"} {
+		if err := queries.ChangeBookingStatus(ctx, owner.ID, receipt.ID, status, now); !errors.Is(err, pgx.ErrNoRows) {
+			t.Fatalf("invalid future transition accepted: %s", status)
+		}
+	}
+	if err := queries.ChangeBookingStatus(ctx, owner.ID, receipt.ID, "cancelled", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := queries.RescheduleBooking(ctx, owner.ID, receipt.ID, start, start.Add(24*time.Hour), now); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("cancelled visit rescheduled")
+	}
+	if err := queries.ChangeBookingStatus(ctx, owner.ID, receipt.ID, "completed", start.Add(200*time.Minute)); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("cancelled booking changed again")
+	}
+	busy, err := queries.ListBusy(ctx, created.ID, start, start.Add(100*time.Minute))
+	if err != nil || len(busy) != 0 {
+		t.Fatal("cancelled booking still occupies time")
+	}
+	if err := queries.InsertBooking(ctx, created, updatedService, "Новый клиент", "+994501234570", "replacement-test", start); err != nil {
+		t.Fatalf("cancelled slot not reusable: %v", err)
+	}
+	replacement, err := queries.GetReceipt(ctx, created.ID, "replacement-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := queries.ChangeBookingStatus(ctx, owner.ID, replacement.ID, "completed", start.Add(100*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	busy, err = queries.ListBusy(ctx, created.ID, start, start.Add(100*time.Minute))
+	if err != nil || len(busy) != 1 {
+		t.Fatal("completed booking lost occupancy")
+	}
+	adjacent, err := queries.GetReceipt(ctx, created.ID, "adjacent-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := queries.ChangeBookingStatus(ctx, owner.ID, adjacent.ID, "no_show", adjacent.Start); err != nil {
+		t.Fatal(err)
+	}
+	busy, err = queries.ListBusy(ctx, created.ID, adjacent.Start, adjacent.End)
+	if err != nil || len(busy) != 0 {
+		t.Fatal("no-show booking still occupies time")
+	}
+	localDay := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC)
+	history, err := queries.ListManagedBookings(ctx, owner.ID, "history", now, localDay, localDay.AddDate(0, 0, 1))
+	if err != nil || len(history) != 3 {
+		t.Fatal("terminal visits missing in history")
+	}
+	upcoming, err := queries.ListManagedBookings(ctx, owner.ID, "upcoming", now, localDay, localDay.AddDate(0, 0, 1))
+	if err != nil || len(upcoming) != 0 {
+		t.Fatal("terminal visits listed as upcoming")
+	}
+	foreign, err = queries.ListManagedBookings(ctx, other.ID, "history", now, localDay, localDay.AddDate(0, 0, 1))
+	if err != nil || len(foreign) != 0 {
+		t.Fatal("managed list leaked to another owner")
+	}
 }

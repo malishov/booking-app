@@ -259,7 +259,38 @@ commit together. Migration 00006 adds the solo employee index, currency snapshot
 and opaque receipt hash.
 
 Success redirects to an unguessable confirmation URL. This page exposes only
-appointment details, not client name or phone. The owner sees the latest 200
-appointments at `/cabinet/bookings`; other owners cannot access them.
-Notifications, cancellation, rescheduling and multi-employee booking remain
-future work. Date selection for extra days off is a planned UX improvement.
+appointment details, not client name or phone. The owner manages appointments
+at `/cabinet/bookings`; other owners cannot access them.
+
+### Managing visits
+
+The owner cabinet opens a daily calendar in the business's local time zone,
+with date selection, week navigation, work hours, breaks and selectable visit
+details. Cancelled visits and no-shows remain available in the day's list without
+occupying the timeline. The daily calendar includes every visit overlapping the
+selected day. Upcoming (active visits, soonest first) and History (past visits
+and terminal statuses) each display up to 200 visits.
+Owners can cancel confirmed visits, mark
+them completed after their end, or mark a no-show after their start. Terminal
+statuses cannot be changed again. Cancellation/no-show releases occupancy;
+completed visits retain their original time range and price snapshot.
+
+`POST /cabinet/bookings/{id}/status` scopes changes to the session owner and
+shares the business transaction lock with booking creation. The client receipt
+shows the current status. The owner must inform the client about a cancellation.
+
+`/cabinet/bookings/new` creates a confirmed visit for an active service using the
+same calendar, availability checks and transaction as public booking. Client
+accounts are not required; manual booking cannot bypass hours, days off, breaks,
+the 60-day horizon or existing visits. No notification is sent automatically.
+`/cabinet/bookings/{id}/reschedule` lets the owner move a future confirmed visit
+to an available date and time within the same 60-day horizon. Availability uses
+the original duration snapshot and excludes the visit's own occupancy, allowing
+partially overlapping moves. The current exact start is omitted from choices.
+The transaction shares the business lock with creation and status changes,
+checks the submitted original start to reject stale forms, and keeps the client,
+service/price/duration/currency snapshots and receipt URL. The receipt shows the
+new time. Past or terminal visits cannot be moved. Owners notify clients manually.
+
+Notifications, client self-cancellation and multi-employee booking remain future
+work.

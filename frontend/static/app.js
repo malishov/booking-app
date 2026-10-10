@@ -78,6 +78,26 @@ document.querySelectorAll('.calendar-service-form').forEach((form) => {
 });
 
 
+document.querySelectorAll('[data-owner-calendar]').forEach((calendar) => {
+  const panels = [...calendar.querySelectorAll('[data-owner-panel]')];
+  const links = [...calendar.querySelectorAll('[data-owner-visit]')];
+  if (!panels.length) return;
+  const show = (id, scroll = false) => {
+    const panel = panels.find((item) => item.dataset.ownerPanel === id);
+    if (!panel) return;
+    panels.forEach((item) => item.hidden = item !== panel);
+    links.forEach((link) => {
+      const selected = link.dataset.ownerVisit === id;
+      link.classList.toggle('event-selected', selected);
+      if (selected) link.setAttribute('aria-current', 'true');
+      else link.removeAttribute('aria-current');
+    });
+    if (scroll && window.matchMedia('(max-width: 760px)').matches) panel.scrollIntoView({block: 'start'});
+  };
+  links.forEach((link) => link.addEventListener('click', (event) => {event.preventDefault();show(link.dataset.ownerVisit, true);}));
+  show(panels.find((item) => item.dataset.selected === 'true')?.dataset.ownerPanel || panels[0].dataset.ownerPanel);
+});
+
 document.querySelectorAll('.days-off-widget').forEach((widget) => {
   const input = widget.querySelector('[name=days_off]');
   const parse = (value) => {

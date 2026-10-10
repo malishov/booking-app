@@ -31,6 +31,8 @@ func NewBooking(p *pgxpool.Pool, t *template.Template, l *slog.Logger) *Booking 
 
 type bookingPageData struct {
 	businessForm
+	Manual                                                         bool
+	Email                                                          string
 	TimezoneDisplay                                                string
 	Services                                                       []serviceView
 	SelectedID                                                     int64
@@ -192,7 +194,7 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 	q := store.New(tx)
-	profile, err := q.GetBusinessBySlug(r.Context(), chi.URLParam(r, "slug"))
+	profile, err := b.bookingProfile(r, q)
 	if err != nil {
 		b.fail(w, r, err)
 		return
@@ -201,7 +203,7 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 		b.fail(w, r, err)
 		return
 	}
-	profile, err = q.GetBusinessBySlug(r.Context(), chi.URLParam(r, "slug"))
+	profile, err = b.bookingProfile(r, q)
 	if err != nil {
 		b.fail(w, r, err)
 		return
@@ -211,6 +213,11 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		b.fail(w, r, err)
 		return
+	}
+	if r.URL.Path == "/cabinet/bookings/new" {
+		data.Manual = true
+		u, _ := CurrentUser(r.Context())
+		data.Email = u.Email
 	}
 	name, phone, message := normalizeClient(r.PostFormValue("client_name"), r.PostFormValue("phone"))
 	data.ClientName = name
@@ -231,7 +238,7 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if message != "" {
 		data.Error = message
-		renderHTML(w, r, b.tmpl, b.logger, "online.html", data, 400)
+		b.renderBooking(w, r, data, 400)
 		return
 	}
 	services, err := q.ListPublicServices(r.Context(), profile.ID)
@@ -248,7 +255,7 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if service.ID == 0 {
 		data.Error = "Эта услуга недоступна. Выберите другую."
-		renderHTML(w, r, b.tmpl, b.logger, "online.html", data, 409)
+		b.renderBooking(w, r, data, 409)
 		return
 	}
 	token, err := auth.NewSessionToken()
@@ -264,7 +271,7 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 			_ = tx.Rollback(r.Context())
 			data.Error = "Это время уже недоступно. Выберите другое окно."
 			data.Slots = nil
-			renderHTML(w, r, b.tmpl, b.logger, "online.html", data, 409)
+			b.renderBooking(w, r, data, 409)
 			return
 		}
 		b.fail(w, r, err)
@@ -272,6 +279,10 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = tx.Commit(r.Context()); err != nil {
 		b.fail(w, r, err)
+		return
+	}
+	if data.Manual {
+		http.Redirect(w, r, "/cabinet/bookings?filter=upcoming&saved=created", 303)
 		return
 	}
 	http.Redirect(w, r, "/b/"+profile.Slug+"/booked/"+token, 303)
@@ -301,7 +312,12 @@ func (b *Booking) Receipt(w http.ResponseWriter, r *http.Request) {
 
 type ownerBookingView struct {
 	store.BookingView
-	Date, Time, Price string
+	Date, Time, Price                 string
+	CanCancel, CanComplete, CanNoShow bool
+	CanReschedule                     bool
+	StatusLabel                       string
+	ReturnFilter, ReturnDate          string
+	Selected                          bool
 }
 
 func (b *Booking) Cabinet(w http.ResponseWriter, r *http.Request) {
@@ -320,25 +336,65 @@ func (b *Booking) Cabinet(w http.ResponseWriter, r *http.Request) {
 		b.fail(w, r, err)
 		return
 	}
-	rows, err := q.ListOwnerBookings(r.Context(), u.ID)
-	if err != nil {
-		b.fail(w, r, err)
-		return
-	}
 	loc, err := time.LoadLocation(p.Timezone)
 	if err != nil {
 		b.fail(w, r, err)
 		return
 	}
-	views := []ownerBookingView{}
-	for _, row := range rows {
-		views = append(views, ownerBookingView{BookingView: row, Date: row.Start.In(loc).Format("02.01.2006"), Time: row.Start.In(loc).Format("15:04") + " — " + row.End.In(loc).Format("15:04"), Price: fmt.Sprintf("%d.%02d", row.PriceCents/100, row.PriceCents%100)})
+	now := time.Now()
+	local := now.In(loc)
+	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
+	filter := bookingFilter(r.FormValue("filter"))
+	if r.FormValue("filter") == "" {
+		filter = "today"
 	}
-	renderHTML(w, r, b.tmpl, b.logger, "bookings.html", struct {
-		Email    string
-		Business store.Business
-		Bookings []ownerBookingView
-	}{u.Email, p, views}, 200)
+	page := ownerBookingsPage{Email: u.Email, Business: p, Filter: filter, Saved: r.URL.Query().Get("saved"), Error: r.URL.Query().Get("error") == "changed"}
+	var rows []store.BookingView
+	if filter == "today" {
+		day := today
+		if raw := r.URL.Query().Get("date"); raw != "" {
+			parsed, e := time.ParseInLocation("2006-01-02", raw, loc)
+			if e != nil || parsed.Format("2006-01-02") != raw {
+				page.ErrorMessage = "Укажите корректную дату."
+			} else {
+				day = parsed
+			}
+		}
+		rows, err = q.ListOwnerDayBookings(r.Context(), u.ID, day, day.AddDate(0, 0, 1))
+		if err != nil {
+			b.fail(w, r, err)
+			return
+		}
+		raw, err := q.GetSchedule(r.Context(), u.ID)
+		if err != nil {
+			b.fail(w, r, err)
+			return
+		}
+		settings := defaultSchedule()
+		if err = json.Unmarshal(raw, &settings); err != nil {
+			b.fail(w, r, err)
+			return
+		}
+		page.Calendar = buildOwnerCalendar(day, settings, rows, now)
+	} else {
+		rows, err = q.ListManagedBookings(r.Context(), u.ID, filter, now, today, today.AddDate(0, 0, 1))
+	}
+	if err != nil {
+		b.fail(w, r, err)
+		return
+	}
+	page.Bookings = ownerBookingViews(rows, loc, now)
+	page.SelectedID = selectedBooking(r.URL.Query().Get("booking"), rows)
+	for i := range page.Bookings {
+		page.Bookings[i].ReturnFilter = filter
+		page.Bookings[i].ReturnDate = page.Calendar.Date
+		page.Bookings[i].Selected = page.Bookings[i].ID == page.SelectedID
+	}
+	status := 200
+	if page.ErrorMessage != "" {
+		status = 400
+	}
+	renderHTML(w, r, b.tmpl, b.logger, "bookings.html", page, status)
 }
 func (b *Booking) fail(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, pgx.ErrNoRows) {

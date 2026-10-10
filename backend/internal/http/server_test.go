@@ -21,6 +21,15 @@ func TestSessionRoutes(t *testing.T) {
 		status                          int
 	}{
 		{http.MethodGet, "/cabinet", "", "", http.StatusSeeOther},
+		{http.MethodGet, "/cabinet/bookings", "", "", http.StatusSeeOther},
+		{http.MethodGet, "/cabinet/bookings/new", "", "", http.StatusSeeOther},
+		{http.MethodPost, "/cabinet/bookings/new", "", "", http.StatusSeeOther},
+		{http.MethodPost, "/cabinet/bookings/1/status", "", "", http.StatusSeeOther},
+		{http.MethodGet, "/cabinet/bookings/1/reschedule", "", "", http.StatusSeeOther},
+		{http.MethodPost, "/cabinet/bookings/1/reschedule", "", "", http.StatusSeeOther},
+		{http.MethodPost, "/cabinet/bookings/1/reschedule", "https://evil.example", "", http.StatusForbidden},
+		{http.MethodPost, "/cabinet/bookings/new", "https://evil.example", "", http.StatusForbidden},
+		{http.MethodPost, "/cabinet/bookings/1/status", "https://evil.example", "", http.StatusForbidden},
 		{http.MethodGet, "/logout", "", "", http.StatusMethodNotAllowed},
 		{http.MethodPost, "/logout", "", "", http.StatusSeeOther},
 		{http.MethodPost, "/login", "https://evil.example", "", http.StatusForbidden},
