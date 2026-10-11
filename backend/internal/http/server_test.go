@@ -1,10 +1,12 @@
 package http
 
 import (
+	"bytes"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/muradalishov/booking-app/frontend"
@@ -52,5 +54,17 @@ func TestSessionRoutes(t *testing.T) {
 				t.Fatalf("status = %d, want %d", rec.Code, tc.status)
 			}
 		})
+	}
+}
+
+func TestReceiptSecretsAbsentFromRequestLog(t *testing.T) {
+	for _, path := range []string{"/booked/secret-token", "/booked/secret-token/extra", "/b/old-address/booked/secret-token", "/b/old-address/booked/secret-token/extra", "/b/old%2Faddress/booked/secret-token"} {
+		var output bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&output, nil))
+		handler := requestLogger(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) }))
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", path, nil))
+		if strings.Contains(output.String(), "secret-token") || !strings.Contains(output.String(), "[redacted]") {
+			t.Fatal("receipt token entered logs", output.String())
+		}
 	}
 }

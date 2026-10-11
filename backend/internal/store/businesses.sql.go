@@ -7,6 +7,8 @@ package store
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getBusinessByOwner = `-- name: GetBusinessByOwner :one
@@ -29,11 +31,30 @@ func (q *Queries) GetBusinessByOwner(ctx context.Context, ownerUserID int64) (Bu
 }
 
 const getBusinessBySlug = `-- name: GetBusinessBySlug :one
-SELECT id, owner_user_id, slug, name, timezone, created_at, description FROM businesses WHERE slug = $1
+SELECT b.id, b.owner_user_id, b.slug, b.name, b.timezone, b.created_at, b.description FROM businesses b JOIN business_slug_aliases a ON a.business_id=b.id WHERE a.slug = $1
 `
 
 func (q *Queries) GetBusinessBySlug(ctx context.Context, slug string) (Business, error) {
 	row := q.db.QueryRow(ctx, getBusinessBySlug, slug)
+	var i Business
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerUserID,
+		&i.Slug,
+		&i.Name,
+		&i.Timezone,
+		&i.CreatedAt,
+		&i.Description,
+	)
+	return i, err
+}
+
+const getReceiptBusiness = `-- name: GetReceiptBusiness :one
+SELECT p.id, p.owner_user_id, p.slug, p.name, p.timezone, p.created_at, p.description FROM businesses p JOIN bookings b ON b.business_id=p.id WHERE b.receipt_hash=$1
+`
+
+func (q *Queries) GetReceiptBusiness(ctx context.Context, receiptHash pgtype.Text) (Business, error) {
+	row := q.db.QueryRow(ctx, getReceiptBusiness, receiptHash)
 	var i Business
 	err := row.Scan(
 		&i.ID,

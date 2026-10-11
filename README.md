@@ -269,6 +269,20 @@ Existing visits are backfilled from the current directory; names overwritten
 before this migration cannot be reconstructed. Downgrading to phone uniqueness
 requires shared-phone customer records to be explicitly resolved first.
 
+Migration 00008 reserves current and future former public addresses in
+`business_slug_aliases`. Old `/b/{slug}` pages redirect to the current address,
+preserving service/date selection; old booking forms can still submit to their
+original business. Only that business can reuse a former address. Redirects
+are temporary and not cached, avoiding loops when an owner restores an address.
+Public addresses discarded before the migration cannot be reconstructed.
+
+New client confirmations use `/booked/{token}`, independent of the public
+address. Legacy `/b/{slug}/booked/{token}` links resolve the hashed token and
+redirect to the same permanent receipt, even if their old slug was discarded
+before the migration. Invalid tokens return 404. Confirmations and redirects
+use `no-store` and `no-referrer`; both receipt route formats redact tokens in
+request logs. Confirmation pages still omit client names and phone numbers.
+
 Success redirects to an unguessable confirmation URL. This page exposes only
 appointment details, not client name or phone. The owner manages appointments
 at `/cabinet/bookings`; other owners cannot access them.

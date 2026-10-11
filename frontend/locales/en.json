@@ -70,7 +70,6 @@
   "До 1000 символов. Это описание увидят ваши клиенты.": "Up to 1,000 characters. Clients will see this description.",
   "Ваш личный адрес": "Your page address",
   "Латинские буквы, цифры и дефисы.": "Use Latin letters, numbers and hyphens.",
-  "При изменении адреса старая ссылка перестанет работать.": "Changing the address will make the old link unavailable.",
   "Часовой пояс": "Time zone",
   "Выберите место, где принимаете клиентов. Оно задаст время будущих записей.": "Choose where you welcome clients. This sets the time zone for future bookings.",
   "Сохранить изменения": "Save changes",
@@ -338,5 +337,6 @@
   "Сообщите клиенту новое время. Его страница подтверждения обновится автоматически.": "Tell the client the new time. Their confirmation page updates automatically.",
   "Запись перенесена. Сообщите клиенту новое время.": "Appointment rescheduled. Tell the client the new time.",
   "Запись уже изменена. Проверьте текущее время и выберите новое окно.": "This appointment has changed. Check its current time and choose a new slot.",
-  "Выберите другой день.": "Choose another day."
+  "Выберите другой день.": "Choose another day.",
+  "Прежние ссылки продолжат работать и откроют ваш новый адрес.": "Previous links keep working and open your new address."
 }

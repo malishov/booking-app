@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -49,6 +50,7 @@ func NewRouter(logger *slog.Logger, pool *pgxpool.Pool, tmpl *template.Template,
 	r.Get("/b/{slug}", bookingH.Page)
 	r.Post("/b/{slug}/book", bookingH.Create)
 	r.Get("/b/{slug}/booked/{token}", bookingH.Receipt)
+	r.Get("/booked/{token}", bookingH.Receipt)
 	r.With(authH.RequireSession).Get("/cabinet/bookings", bookingH.Cabinet)
 	r.With(authH.RequireSession).Get("/cabinet/bookings/new", bookingH.ManualPage)
 	r.With(authH.RequireSession).Post("/cabinet/bookings/new", bookingH.Create)
@@ -73,10 +75,23 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			logger.Info("request",
 				"method", r.Method,
-				"path", r.URL.Path,
+				"path", requestLogPath(r.URL.Path),
 				"request_id", middleware.GetReqID(r.Context()),
 			)
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// Receipt tokens grant access to a confirmation and must never enter logs.
+func requestLogPath(path string) string {
+	if strings.HasPrefix(path, "/booked/") {
+		return "/booked/[redacted]"
+	}
+	if strings.HasPrefix(path, "/b/") {
+		if at := strings.Index(path, "/booked/"); at >= 0 {
+			return path[:at] + "/booked/[redacted]"
+		}
+	}
+	return path
 }

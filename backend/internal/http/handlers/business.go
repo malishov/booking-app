@@ -143,6 +143,9 @@ func (b *Business) PublicPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Use an explicit public view model: never pass account or owner data.
+	if redirectBusinessAlias(w, r, profile.Slug) {
+		return
+	}
 	services, err := b.store.ListPublicServices(r.Context(), profile.ID)
 	if err != nil {
 		b.serverError(w, err)
@@ -166,6 +169,21 @@ func (b *Business) renderCabinet(w http.ResponseWriter, r *http.Request, data bu
 		data.Timezones = append(data.Timezones, data.Form.Timezone)
 	}
 	renderHTML(w, r, b.tmpl, b.logger, "cabinet.html", data, status)
+}
+
+func redirectBusinessAlias(w http.ResponseWriter, r *http.Request, canonical string) bool {
+	if chi.URLParam(r, "slug") == canonical {
+		return false
+	}
+	target := "/b/" + canonical
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	// The master can reactivate an earlier address; cached permanent redirects
+	// could otherwise create loops when the addresses change back.
+	w.Header().Set("Cache-Control", "no-store")
+	http.Redirect(w, r, target, http.StatusTemporaryRedirect)
+	return true
 }
 
 func (b *Business) serverError(w http.ResponseWriter, err error) {

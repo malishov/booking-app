@@ -42,6 +42,11 @@ type Business struct {
 	Description string             `json:"description"`
 }
 
+type BusinessSlugAlias struct {
+	Slug       string `json:"slug"`
+	BusinessID int64  `json:"business_id"`
+}
+
 type Customer struct {
 	ID         int64              `json:"id"`
 	BusinessID int64              `json:"business_id"`

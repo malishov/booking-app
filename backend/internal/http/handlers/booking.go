@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/muradalishov/booking-app/backend/internal/auth"
 	"github.com/muradalishov/booking-app/backend/internal/store"
@@ -147,6 +148,9 @@ func (b *Booking) Page(w http.ResponseWriter, r *http.Request) {
 		b.fail(w, r, err)
 		return
 	}
+	if redirectBusinessAlias(w, r, p.Slug) {
+		return
+	}
 	data, err := b.data(r, q, p)
 	if err != nil {
 		b.fail(w, r, err)
@@ -285,16 +289,26 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/cabinet/bookings?filter=upcoming&saved=created", 303)
 		return
 	}
-	http.Redirect(w, r, "/b/"+profile.Slug+"/booked/"+token, 303)
+	http.Redirect(w, r, "/booked/"+token, 303)
 }
 func (b *Booking) Receipt(w http.ResponseWriter, r *http.Request) {
 	q := store.New(b.pool)
-	p, err := q.GetBusinessBySlug(r.Context(), chi.URLParam(r, "slug"))
+	token := chi.URLParam(r, "token")
+	hash := auth.SessionTokenHash(token)
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Cache-Control", "private, no-store")
+	p, err := q.GetReceiptBusiness(r.Context(), pgtype.Text{String: hash, Valid: true})
 	if err != nil {
 		b.fail(w, r, err)
 		return
 	}
-	receipt, err := q.GetReceipt(r.Context(), p.ID, auth.SessionTokenHash(chi.URLParam(r, "token")))
+	if slug := chi.URLParam(r, "slug"); slug != "" {
+		// The validated secret identifies the visit. Even a slug lost before
+		// aliases were introduced (or subsequently reused) cannot hijack it.
+		http.Redirect(w, r, "/booked/"+token, http.StatusFound)
+		return
+	}
+	receipt, err := q.GetReceipt(r.Context(), p.ID, hash)
 	if err != nil {
 		b.fail(w, r, err)
 		return

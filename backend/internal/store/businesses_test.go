@@ -76,9 +76,9 @@ func TestBusinessPersistence(t *testing.T) {
 	if err != nil || byOwner.Name != params.Name || byOwner.Description != params.Description {
 		t.Fatal("profile was not persisted")
 	}
-	_, err = queries.GetBusinessBySlug(ctx, "anna-nails")
-	if !errors.Is(err, pgx.ErrNoRows) {
-		t.Fatal("old slug still resolves")
+	alias, err := queries.GetBusinessBySlug(ctx, "anna-nails")
+	if err != nil || alias.ID != created.ID || alias.Slug != "anna-studio" {
+		t.Fatal("old slug did not resolve to the current profile")
 	}
 	public, err := queries.GetBusinessBySlug(ctx, params.Slug)
 	if err != nil || public.ID != created.ID {

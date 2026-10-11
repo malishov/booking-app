@@ -70,7 +70,6 @@
   "До 1000 символов. Это описание увидят ваши клиенты.": "1000 simvola qədər. Bu təsviri müştəriləriniz görəcək.",
   "Ваш личный адрес": "Şəxsi səhifə ünvanınız",
   "Латинские буквы, цифры и дефисы.": "Latın hərfləri, rəqəmlər və defislər.",
-  "При изменении адреса старая ссылка перестанет работать.": "Ünvan dəyişdikdə köhnə keçid işləməyəcək.",
   "Часовой пояс": "Saat qurşağı",
   "Выберите место, где принимаете клиентов. Оно задаст время будущих записей.": "Müştəriləri qəbul etdiyiniz yerin saat qurşağını seçin. Gələcək rezervasiyaların vaxtı buna əsaslanacaq.",
   "Сохранить изменения": "Dəyişiklikləri saxla",
@@ -338,5 +337,6 @@
   "Сообщите клиенту новое время. Его страница подтверждения обновится автоматически.": "Müştəriyə yeni vaxtı bildirin. Təsdiq səhifəsi avtomatik yenilənəcək.",
   "Запись перенесена. Сообщите клиенту новое время.": "Görüşün vaxtı dəyişdirildi. Müştəriyə yeni vaxtı bildirin.",
   "Запись уже изменена. Проверьте текущее время и выберите новое окно.": "Bu görüş artıq dəyişdirilib. Hazırkı vaxtı yoxlayın və yeni vaxt seçin.",
-  "Выберите другой день.": "Başqa gün seçin."
+  "Выберите другой день.": "Başqa gün seçin.",
+  "Прежние ссылки продолжат работать и откроют ваш новый адрес.": "Əvvəlki keçidlər işləməyə davam edəcək və yeni ünvanınızı açacaq."
 }

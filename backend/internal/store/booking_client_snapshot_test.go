@@ -44,7 +44,7 @@ func snapshotTestDB(t *testing.T, legacy bool) (context.Context, pgx.Tx, *Querie
 		t.Fatal(err)
 	}
 	for _, file := range files {
-		if legacy && strings.HasPrefix(file, "00007_") {
+		if legacy && file >= "00007_" {
 			continue
 		}
 		raw, err := migrations.FS.ReadFile(file)

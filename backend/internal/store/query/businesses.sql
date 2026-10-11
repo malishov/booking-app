@@ -2,7 +2,10 @@
 SELECT * FROM businesses WHERE owner_user_id = $1;
 
 -- name: GetBusinessBySlug :one
-SELECT * FROM businesses WHERE slug = $1;
+SELECT b.* FROM businesses b JOIN business_slug_aliases a ON a.business_id=b.id WHERE a.slug = $1;
+
+-- name: GetReceiptBusiness :one
+SELECT p.* FROM businesses p JOIN bookings b ON b.business_id=p.id WHERE b.receipt_hash=$1;
 
 -- name: SaveBusiness :one
 INSERT INTO businesses (owner_user_id, name, slug, description, timezone)
