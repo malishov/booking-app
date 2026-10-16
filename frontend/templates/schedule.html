@@ -24,9 +24,9 @@
 <p class="days-off-status" role="status" aria-live="polite"></p>
 </div>
 <div class="field days-off-fallback"><label for="days-off">{{t "Даты без приёма"}}</label><textarea id="days-off" name="days_off" rows="5" placeholder="2026-12-31&#10;2027-01-01">{{.DaysOff}}</textarea><small class="field-hint">{{t "ГГГГ-ММ-ДД, каждая дата с новой строки. До 100 дат."}}</small></div>
-<p class="field-hint">{{t "Выходные применятся после сохранения расписания. Существующие записи не отменяются."}}</p>
+<p class="field-hint">{{t "Выбранные даты будут закрыты для новых онлайн-записей. Существующие записи не изменятся."}}</p>
 <button type="submit" class="button button-primary days-off-save">{{t "Сохранить расписание"}} {{template "arrow"}}</button>
 </div>
-</section><p class="service-catalog-note">{{t "Выходные закрывают даты для новых онлайн-записей."}}</p></aside>
+</section></aside>
 </form></main><footer class="cabinet-footer"><span>© Окно, 2026</span><span>{{t "Ваша работа. Ваш ритм."}}</span></footer>
 </body></html>

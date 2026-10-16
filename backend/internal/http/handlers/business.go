@@ -61,6 +61,7 @@ type businessPageData struct {
 	Timezones     []string
 	Error         string
 	Saved         bool
+	Created       bool
 	NeedsBusiness bool
 }
 
@@ -71,7 +72,7 @@ func (b *Business) Cabinet(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	data := businessPageData{Email: user.Email, Form: businessForm{Timezone: "UTC"}, Saved: r.URL.Query().Get("saved") == "1", NeedsBusiness: r.URL.Query().Get("setup") == "services" || r.URL.Query().Get("setup") == "schedule"}
+	data := businessPageData{Email: user.Email, Form: businessForm{Timezone: "UTC"}, Saved: r.URL.Query().Get("saved") == "1", Created: r.URL.Query().Get("created") == "1", NeedsBusiness: r.URL.Query().Get("setup") == "services" || r.URL.Query().Get("setup") == "schedule"}
 	profile, err := b.store.GetBusinessByOwner(r.Context(), user.ID)
 	if err == nil {
 		data.Business = &profile
@@ -104,6 +105,7 @@ func (b *Business) SaveProfile(w http.ResponseWriter, r *http.Request) {
 	data := businessPageData{Email: user.Email, Form: form}
 	// Keep the existing public link visible when validation fails.
 	existing, err := b.store.GetBusinessByOwner(r.Context(), user.ID)
+	created := errors.Is(err, pgx.ErrNoRows)
 	if err == nil {
 		data.Business = &existing
 	} else if !errors.Is(err, pgx.ErrNoRows) {
@@ -128,7 +130,11 @@ func (b *Business) SaveProfile(w http.ResponseWriter, r *http.Request) {
 		b.serverError(w, err)
 		return
 	}
-	http.Redirect(w, r, "/cabinet?saved=1", http.StatusSeeOther)
+	if created {
+		http.Redirect(w, r, "/cabinet?created=1#profile-actions", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/cabinet?saved=1#profile-actions", http.StatusSeeOther)
 }
 
 // PublicPage shows a profile to clients without exposing the owner's identity.
