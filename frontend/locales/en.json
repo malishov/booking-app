@@ -122,6 +122,7 @@
   "Выберите часовой пояс из базы IANA, например Asia/Dubai.": "Choose an IANA time zone, for example Asia/Dubai.",
   "Укажите корректный часовой пояс, например Asia/Dubai.": "Enter a valid time zone, for example Asia/Dubai.",
   "Форма слишком большая или некорректная.": "The form is too large or invalid.",
+  "Слишком много попыток. Подождите немного и попробуйте снова.": "Too many attempts. Wait a little and try again.",
   "Ссылка скопирована. Можно отправлять клиентам.": "Link copied. Ready to share with clients.",
   "Не удалось скопировать. Выделите ссылку и скопируйте вручную.": "Couldn't copy the link. Select it and copy it manually.",
   "Язык интерфейса": "Interface language",

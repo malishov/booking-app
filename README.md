@@ -218,6 +218,23 @@ Docker Compose disables Secure cookies for local HTTP. Keep
 authenticate; old rows can be removed with
 `DELETE FROM sessions WHERE expires_at <= now();`.
 
+## Abuse protection
+
+Sensitive public POST routes use bounded in-memory token-bucket limits:
+
+- login: 10 attempts per IP and 5 attempts per normalized email every 15 minutes;
+- registration: 5 attempts per IP and 3 attempts per normalized email per hour;
+- public booking: 10 attempts per IP and business, plus a 60-attempt business
+  burst limit, every 10 minutes.
+
+Rejected requests return `429 Too Many Requests` with `Retry-After`. Email
+addresses are represented only by SHA-256 digests in limiter keys and are never
+logged by the limiter. Client identity comes from `RemoteAddr`; forwarded IP
+headers are intentionally ignored until trusted proxies are explicitly
+configured. The in-memory limiter protects a single app instance. Multiple app
+replicas require a shared limiter backend such as Redis or an equivalent edge
+rate limiter.
+
 ## Development
 
 ```bash
