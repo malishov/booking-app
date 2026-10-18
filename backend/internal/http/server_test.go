@@ -68,3 +68,25 @@ func TestReceiptSecretsAbsentFromRequestLog(t *testing.T) {
 		}
 	}
 }
+
+func TestRegistrationRouteIsRateLimited(t *testing.T) {
+	tmpl, err := frontend.ParseTemplates()
+	if err != nil {
+		t.Fatal(err)
+	}
+	router := NewRouter(slog.New(slog.NewTextHandler(io.Discard, nil)), nil, tmpl, true)
+	for i := 0; i < 6; i++ {
+		body := strings.NewReader("email=invalid" + string(rune('a'+i)) + "&password=supersecret")
+		req := httptest.NewRequest(http.MethodPost, "/register", body)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.RemoteAddr = "203.0.113.50:1234"
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if i < 5 && rec.Code != http.StatusBadRequest {
+			t.Fatalf("request %d status = %d, want 400", i+1, rec.Code)
+		}
+		if i == 5 && (rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") == "") {
+			t.Fatalf("request 6 status = %d Retry-After=%q", rec.Code, rec.Header().Get("Retry-After"))
+		}
+	}
+}

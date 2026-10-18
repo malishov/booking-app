@@ -122,6 +122,7 @@
   "Выберите часовой пояс из базы IANA, например Asia/Dubai.": "IANA saat qurşağı seçin, məsələn Asia/Dubai.",
   "Укажите корректный часовой пояс, например Asia/Dubai.": "Düzgün saat qurşağı daxil edin, məsələn Asia/Dubai.",
   "Форма слишком большая или некорректная.": "Forma çox böyükdür və ya düzgün deyil.",
+  "Слишком много попыток. Подождите немного и попробуйте снова.": "Həddindən çox cəhd edildi. Bir az gözləyib yenidən yoxlayın.",
   "Ссылка скопирована. Можно отправлять клиентам.": "Keçid kopyalandı. Müştərilərlə paylaşa bilərsiniz.",
   "Не удалось скопировать. Выделите ссылку и скопируйте вручную.": "Kopyalamaq alınmadı. Keçidi seçib əl ilə kopyalayın.",
   "Язык интерфейса": "İnterfeys dili",
