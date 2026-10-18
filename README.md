@@ -317,5 +317,6 @@ checks the submitted original start to reject stale forms, and keeps the client,
 service/price/duration/currency snapshots and receipt URL. The receipt shows the
 new time. Past or terminal visits cannot be moved. Owners notify clients manually.
 
-Notifications, client self-cancellation and multi-employee booking remain future
-work.
+Notifications, client self-cancellation, multi-service visits and multi-employee
+booking remain future work. Product and UX details are tracked in
+[`design/roadmap.md`](design/roadmap.md).

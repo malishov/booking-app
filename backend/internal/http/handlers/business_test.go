@@ -85,19 +85,25 @@ func TestBusinessCreateAndEdit(t *testing.T) {
 	b := testBusiness(t, s)
 	values := validProfileValues()
 	values.Set("owner_user_id", "999")
-	for _, name := range []string{"Анна · маникюр", "Студия Анны"} {
+	for i, name := range []string{"Анна · маникюр", "Студия Анны"} {
 		values.Set("name", name)
 		values.Set("slug", " ANNA-NAILS ")
 		rec := httptest.NewRecorder()
 		b.SaveProfile(rec, ownerRequest(postForm(values.Encode())))
-		if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/cabinet?saved=1" {
+		wantLocation := "/cabinet?saved=1#profile-actions"
+		pageURL := "/cabinet?saved=1"
+		if i == 0 {
+			wantLocation = "/cabinet?created=1#profile-actions"
+			pageURL = "/cabinet?created=1"
+		}
+		if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != wantLocation {
 			t.Fatalf("save: %d %s", rec.Code, rec.Body.String())
 		}
 		if s.saved.OwnerUserID != 42 || s.ownerID != 42 || s.saved.Name != name || s.saved.Slug != "anna-nails" {
 			t.Fatalf("incorrect owner or data: %+v", s.saved)
 		}
 		page := httptest.NewRecorder()
-		b.Cabinet(page, ownerRequest(httptest.NewRequest(http.MethodGet, "/cabinet?saved=1", nil)))
+		b.Cabinet(page, ownerRequest(httptest.NewRequest(http.MethodGet, pageURL, nil)))
 		if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), name) || !strings.Contains(page.Body.String(), "/b/anna-nails") || !strings.Contains(page.Body.String(), "Изменения сохранены") {
 			t.Fatal("cabinet did not render saved profile")
 		}

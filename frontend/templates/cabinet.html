@@ -8,10 +8,9 @@
     <main class="cabinet-main">
         <div class="cabinet-heading"><div><p class="eyebrow">{{t "ЛИЧНЫЙ КАБИНЕТ"}}</p><h1>{{t "Ваше дело —"}}<br><em>{{t "в вашем ритме."}}</em></h1><p class="cabinet-intro">{{if .Business}}{{t "Ваша страница готова. Сделаем её ещё ближе к вам."}}{{else}}{{t "Начнём с вашей страницы. Расскажите клиентам о себе."}}{{end}}</p></div><span class="cabinet-flower" aria-hidden="true">✳</span></div>
         {{if .NeedsBusiness}}{{if not .Business}}<div class="save-success" role="status">{{t "Сначала создайте страницу мастера, затем настройте услуги и расписание."}}</div>{{end}}{{end}}
-        {{if .Saved}}<div class="save-success" role="status">{{template "check"}} {{t "Изменения сохранены. Ваша страница уже обновлена."}}</div>{{end}}
         <section class="profile-layout" aria-labelledby="profile-title">
             <div class="profile-panel" id="profile-editor">
-                <div class="profile-panel-heading"><span class="eyebrow">{{t "ШАГ 01 · ВАША СТРАНИЦА"}}</span>{{if .Business}}<span class="live-badge"><i class="status-dot"></i> {{t "Опубликована"}}</span>{{end}}</div>
+                <div class="profile-panel-heading"><span class="eyebrow">{{t "ШАГ 01 · ВАША СТРАНИЦА"}}</span></div>
                 <h2 id="profile-title">{{if .Business}}{{t "Ваша визитка."}}{{else}}{{t "Давайте знакомиться."}}{{end}}</h2>
                 <p class="profile-subtitle">{{t "Несколько деталей, чтобы клиенты нашли именно вас."}}</p>
                 {{if .Error}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
@@ -20,12 +19,12 @@
                     <div class="field"><label for="business-description">{{t "Немного о вашем деле "}}<span class="optional-label">{{t "необязательно"}}</span></label><textarea id="business-description" name="description" rows="4" maxlength="1000" placeholder="{{t "Что вы делаете, ваш подход и где принимаете клиентов."}}">{{.Form.Description}}</textarea><small class="field-hint">{{t "До 1000 символов. Это описание увидят ваши клиенты."}}</small></div>
                     <div class="field"><label for="business-slug">{{t "Ваш личный адрес"}}</label><div class="slug-field"><span>/b/</span><input id="business-slug" name="slug" value="{{.Form.Slug}}" placeholder="anna-nails" minlength="3" maxlength="60" pattern="[a-z0-9]+(-[a-z0-9]+)*" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="slug-hint" required></div><small id="slug-hint" class="field-hint">{{t "Латинские буквы, цифры и дефисы."}}{{if .Business}} {{t "Прежние ссылки продолжат работать и откроют ваш новый адрес."}}{{end}}</small></div>
                     <div class="field"><label for="business-timezone">{{t "Часовой пояс"}}</label><select id="business-timezone" name="timezone" data-auto-timezone="{{if not .Business}}{{if not .Error}}true{{end}}{{end}}" required>{{range .Timezones}}<option value="{{.}}" {{if eq . $.Form.Timezone}}selected{{end}}>{{timezoneLabel .}}</option>{{end}}</select><small class="field-hint">{{t "Выберите место, где принимаете клиентов. Оно задаст время будущих записей."}}</small></div>
-                    <button class="button button-primary" type="submit">{{if .Business}}{{t "Сохранить изменения"}}{{else}}{{t "Создать мою страницу"}}{{end}} {{template "arrow"}}</button>
+                    <div class="profile-actions" id="profile-actions"><button class="button button-primary" type="submit">{{if .Business}}{{t "Сохранить изменения"}}{{else}}{{t "Создать мою страницу"}}{{end}} {{template "arrow"}}</button>{{if .Created}}<div class="profile-published-notice" role="status">{{template "check"}}<div><strong>{{t "Визитка опубликована"}}</strong><span>{{t "Страница готова и доступна клиентам."}}</span></div></div>{{end}}</div>
                 </form>
             </div>
             <aside class="profile-side">
                 {{if .Business}}
-                <div class="link-panel"><div class="link-panel-icon" aria-hidden="true">↗</div><p class="eyebrow">{{t "ВАША ЛИЧНАЯ ССЫЛКА"}}</p><h2>{{t "Вас уже можно найти."}}</h2><p>{{t "Отправьте ссылку в WhatsApp или Telegram — клиенты смогут познакомиться с вами."}}</p><a class="public-link" href="/b/{{.Business.Slug}}" data-public-link>/b/{{.Business.Slug}}</a><div class="link-actions"><a class="button button-primary" href="/b/{{.Business.Slug}}" target="_blank" rel="noopener">{{t "Посмотреть страницу"}} {{template "arrow"}}</a><button class="button button-quiet copy-link" type="button" hidden>{{t "Скопировать ссылку"}}</button></div><p data-success="{{t "Ссылка скопирована. Можно отправлять клиентам."}}" data-failure="{{t "Не удалось скопировать. Выделите ссылку и скопируйте вручную."}}" class="copy-status" role="status" aria-live="polite"></p></div>
+                <div class="link-panel {{if .Created}}link-panel-activated{{end}}"><div class="link-panel-top"><div class="link-panel-icon" aria-hidden="true">↗</div><span class="live-badge"><i class="status-dot"></i> {{t "Опубликована"}}</span></div><p class="eyebrow">{{t "ВАША ЛИЧНАЯ ССЫЛКА"}}</p><h2>{{t "Вас уже можно найти."}}</h2><p>{{t "Отправьте ссылку в WhatsApp или Telegram — клиенты смогут познакомиться с вами."}}</p><a class="public-link" href="/b/{{.Business.Slug}}" data-public-link>/b/{{.Business.Slug}}</a><div class="link-actions"><a class="button button-primary" href="/b/{{.Business.Slug}}" target="_blank" rel="noopener">{{t "Посмотреть страницу"}} {{template "arrow"}}</a><button class="button button-quiet copy-link" type="button" hidden>{{t "Скопировать ссылку"}}</button></div><p data-success="{{t "Ссылка скопирована. Можно отправлять клиентам."}}" data-failure="{{t "Не удалось скопировать. Выделите ссылку и скопируйте вручную."}}" class="copy-status" role="status" aria-live="polite"></p></div>
                 {{else}}
                 <div class="link-panel"><div class="link-panel-icon" aria-hidden="true">✳</div><p class="eyebrow">{{t "ОДНА ССЫЛКА. ВАШЕ ДЕЛО."}}</p><h2>{{t "Маленькая страница."}}<br>{{t "Большое начало."}}</h2><p>{{t "Название и описание помогут клиентам познакомиться с вами. А личная ссылка станет вашей визиткой в мессенджерах."}}</p><div class="sample-link"><span>{{t "Ваша будущая ссылка"}}</span><strong>/b/anna-nails</strong></div></div>
                 {{end}}
@@ -34,6 +33,7 @@
             </aside>
         </section>
     </main>
+    {{if or .Saved .Created}}<div class="save-toast" role="status" data-auto-dismiss>{{template "check"}}<span>{{t "Изменения сохранены"}}</span><button type="button" aria-label="{{t "Закрыть уведомление"}}">×</button></div>{{end}}
     <footer class="cabinet-footer"><span>© Окно, 2026</span><span>{{t "Ваша работа. Ваш ритм."}}</span></footer>
 </body>
 </html>

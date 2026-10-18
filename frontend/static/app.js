@@ -24,6 +24,15 @@ if (publicLink && copyButton && navigator.clipboard && window.isSecureContext) {
   });
 }
 
+document.querySelectorAll('[data-auto-dismiss]').forEach((toast) => {
+  const close = () => {
+    toast.classList.add('is-leaving');
+    setTimeout(() => toast.remove(), 180);
+  };
+  toast.querySelector('button')?.addEventListener('click', close);
+  setTimeout(close, 5000);
+});
+
 document.querySelectorAll('.language-picker').forEach((form) => {
   form.querySelector('.language-apply').hidden = true;
   form.querySelector('.language-select').addEventListener('change', () => form.requestSubmit());
