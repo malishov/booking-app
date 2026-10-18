@@ -86,6 +86,80 @@ document.querySelectorAll('.calendar-service-form').forEach((form) => {
   form.querySelector('select').addEventListener('change', () => form.requestSubmit());
 });
 
+const bookingDraftPrefix = 'okno:booking-draft:v1:';
+const bookingDraftPending = 'okno:booking-draft:v1:pending';
+const bookingDraftTTL = 15 * 60 * 1000;
+const draftStorage = (() => {
+  try {
+    const probe = bookingDraftPrefix + 'probe';
+    sessionStorage.setItem(probe, '1');
+    sessionStorage.removeItem(probe);
+    return sessionStorage;
+  } catch {
+    return null;
+  }
+})();
+
+document.querySelectorAll('[data-booking-draft]').forEach((form) => {
+  if (!draftStorage) return;
+  const key = bookingDraftPrefix + form.dataset.bookingDraft;
+  const name = form.querySelector('[name=client_name]');
+  const phone = form.querySelector('[name=phone]');
+  if (!name || !phone) return;
+
+  try {
+    const draft = JSON.parse(draftStorage.getItem(key));
+    if (!draft || !Number.isFinite(draft.expiresAt) || draft.expiresAt <= Date.now()) {
+      draftStorage.removeItem(key);
+    } else {
+      if (!name.value && typeof draft.name === 'string') name.value = draft.name;
+      if (!phone.value && typeof draft.phone === 'string') phone.value = draft.phone;
+    }
+  } catch {
+    draftStorage.removeItem(key);
+  }
+
+  const save = () => {
+    try {
+      if (!name.value && !phone.value) {
+        draftStorage.removeItem(key);
+        return;
+      }
+      draftStorage.setItem(key, JSON.stringify({
+        name: name.value,
+        phone: phone.value,
+        expiresAt: Date.now() + bookingDraftTTL,
+      }));
+    } catch {
+      draftStorage.removeItem(key);
+    }
+  };
+  name.addEventListener('input', save);
+  phone.addEventListener('input', save);
+  form.addEventListener('submit', () => {
+    save();
+    try {
+      draftStorage.setItem(bookingDraftPending, key);
+    } catch {
+      draftStorage.removeItem(bookingDraftPending);
+    }
+  });
+});
+
+document.querySelectorAll('[data-booking-complete]').forEach((complete) => {
+  if (!draftStorage) return;
+  const key = bookingDraftPrefix + complete.dataset.bookingComplete;
+  if (draftStorage.getItem(bookingDraftPending) !== key) return;
+  draftStorage.removeItem(key);
+  draftStorage.removeItem(bookingDraftPending);
+});
+
+if (draftStorage && document.querySelector('[data-booking-complete-pending]')) {
+  const key = draftStorage.getItem(bookingDraftPending);
+  if (key?.startsWith(bookingDraftPrefix)) draftStorage.removeItem(key);
+  draftStorage.removeItem(bookingDraftPending);
+}
+
 
 document.querySelectorAll('[data-owner-calendar]').forEach((calendar) => {
   const panels = [...calendar.querySelectorAll('[data-owner-panel]')];
