@@ -7,6 +7,7 @@ import (
 
 type calendarDay struct {
 	Number                     int
+	Count                      int
 	Date, Label                string
 	Available, Selected, Today bool
 }
@@ -37,8 +38,8 @@ func bookingCalendar(settings scheduleSettings, loc *time.Location, duration int
 					dayBusy = append(dayBusy, interval)
 				}
 			}
-			available := len(availableSlots(settings, date, loc, duration, dayBusy, now)) > 0
-			cell := calendarDay{Number: day.Day(), Date: date, Label: day.Format("02.01.2006"), Available: available, Selected: date == selected, Today: day.Equal(today)}
+			count := len(availableSlots(settings, date, loc, duration, dayBusy, now))
+			cell := calendarDay{Number: day.Day(), Count: count, Date: date, Label: day.Format("02.01.2006"), Available: count > 0, Selected: date == selected, Today: day.Equal(today)}
 			if cell.Selected {
 				month.Selected = true
 			}

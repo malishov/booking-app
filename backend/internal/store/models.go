@@ -23,13 +23,14 @@ type Booking struct {
 }
 
 type BookingItem struct {
-	ID              int64       `json:"id"`
-	BookingID       int64       `json:"booking_id"`
-	ServiceID       pgtype.Int8 `json:"service_id"`
-	ServiceName     string      `json:"service_name"`
-	PriceCents      int32       `json:"price_cents"`
-	DurationMinutes int32       `json:"duration_minutes"`
-	Currency        string      `json:"currency"`
+	ID               int64       `json:"id"`
+	BookingID        int64       `json:"booking_id"`
+	ServiceID        pgtype.Int8 `json:"service_id"`
+	ServiceName      string      `json:"service_name"`
+	PriceCents       int32       `json:"price_cents"`
+	DurationMinutes  int32       `json:"duration_minutes"`
+	Currency         string      `json:"currency"`
+	PriceUnspecified bool        `json:"price_unspecified"`
 }
 
 type Business struct {
@@ -79,14 +80,15 @@ type MasterSchedule struct {
 }
 
 type Service struct {
-	ID              int64              `json:"id"`
-	BusinessID      int64              `json:"business_id"`
-	Name            string             `json:"name"`
-	DurationMinutes int32              `json:"duration_minutes"`
-	PriceCents      int32              `json:"price_cents"`
-	IsActive        bool               `json:"is_active"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	Currency        string             `json:"currency"`
+	ID               int64              `json:"id"`
+	BusinessID       int64              `json:"business_id"`
+	Name             string             `json:"name"`
+	DurationMinutes  int32              `json:"duration_minutes"`
+	PriceCents       int32              `json:"price_cents"`
+	IsActive         bool               `json:"is_active"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	Currency         string             `json:"currency"`
+	PriceUnspecified bool               `json:"price_unspecified"`
 }
 
 type Session struct {

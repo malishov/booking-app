@@ -58,7 +58,7 @@ func TestSessionRoutes(t *testing.T) {
 }
 
 func TestReceiptSecretsAbsentFromRequestLog(t *testing.T) {
-	for _, path := range []string{"/booked/secret-token", "/booked/secret-token/extra", "/b/old-address/booked/secret-token", "/b/old-address/booked/secret-token/extra", "/b/old%2Faddress/booked/secret-token"} {
+	for _, path := range []string{"/v2/booked/secret-token", "/booked/secret-token", "/booked/secret-token/extra", "/b/old-address/booked/secret-token", "/b/old-address/booked/secret-token/extra", "/b/old%2Faddress/booked/secret-token"} {
 		var output bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&output, nil))
 		handler := requestLogger(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) }))

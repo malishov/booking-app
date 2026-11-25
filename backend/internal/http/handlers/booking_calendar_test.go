@@ -43,6 +43,12 @@ func TestCalendarAvailabilityAndHorizon(t *testing.T) {
 			t.Fatalf("%s should be available", date)
 		}
 	}
+	for date, cell := range cells {
+		want := len(availableSlots(settings, date, loc, 90, busy, now))
+		if cell.Count != want {
+			t.Errorf("%s: calendar count = %d, actual slots = %d", date, cell.Count, want)
+		}
+	}
 	long := bookingCalendar(settings, loc, 600, busy, now, "2026-10-09")
 	for _, m := range long {
 		for _, c := range m.Days {

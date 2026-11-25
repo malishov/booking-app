@@ -35,7 +35,7 @@ func (f *fakeServiceStore) GetServiceByOwner(_ context.Context, p store.GetServi
 func (f *fakeServiceStore) CreateService(_ context.Context, p store.CreateServiceParams) (store.Service, error) {
 	f.calls++
 	f.owner = p.OwnerUserID
-	f.row = store.Service{ID: 1, BusinessID: f.profile.ID, Name: p.Name, DurationMinutes: p.DurationMinutes, PriceCents: p.PriceCents, Currency: p.Currency, IsActive: true}
+	f.row = store.Service{ID: 1, BusinessID: f.profile.ID, Name: p.Name, DurationMinutes: p.DurationMinutes, PriceCents: p.PriceCents, PriceUnspecified: p.PriceUnspecified, Currency: p.Currency, IsActive: true}
 	return f.row, nil
 }
 func (f *fakeServiceStore) UpdateService(ctx context.Context, p store.UpdateServiceParams) (store.Service, error) {
@@ -47,6 +47,7 @@ func (f *fakeServiceStore) UpdateService(ctx context.Context, p store.UpdateServ
 	f.row.Name = p.Name
 	f.row.DurationMinutes = p.DurationMinutes
 	f.row.PriceCents = p.PriceCents
+	f.row.PriceUnspecified = p.PriceUnspecified
 	f.row.Currency = p.Currency
 	return f.row, nil
 }
@@ -66,7 +67,7 @@ func TestPricePrecisionAndValidation(t *testing.T) {
 		valid bool
 	}{
 		{"0", 0, true}, {"0.01", 1, true}, {"35.10", 3510, true}, {"35,1", 3510, true}, {"9999999.99", 999999999, true},
-		{"-1", 0, false}, {"1.001", 0, false}, {"1e3", 0, false}, {"NaN", 0, false}, {"10000000", 0, false}, {"", 0, false},
+		{"-1", 0, false}, {"1.001", 0, false}, {"1e3", 0, false}, {"NaN", 0, false}, {"10000000", 0, false}, {"", 0, true},
 	} {
 		_, cents, message := validateService(serviceForm{Name: "Маникюр", Duration: "90", Price: tc.price, Currency: "AZN"})
 		if (message == "") != tc.valid || tc.valid && cents != tc.cents {
@@ -76,6 +77,15 @@ func TestPricePrecisionAndValidation(t *testing.T) {
 	for _, form := range []serviceForm{{Name: "x", Duration: "90", Price: "35", Currency: "AZN"}, {Name: "Маникюр", Duration: "0", Price: "35", Currency: "AZN"}, {Name: "Маникюр", Duration: "1.5", Price: "35", Currency: "AZN"}, {Name: "Маникюр", Duration: "1441", Price: "35", Currency: "AZN"}, {Name: "Маникюр", Duration: "90", Price: "35", Currency: "XXX"}} {
 		if _, _, message := validateService(form); message == "" {
 			t.Fatal("invalid service accepted")
+		}
+	}
+}
+
+func TestUnspecifiedPriceDiffersFromFree(t *testing.T) {
+	views := serviceViews([]store.Service{{PriceCents: 0, Currency: "AZN", PriceUnspecified: true}, {PriceCents: 0, Currency: "AZN"}, {PriceCents: 3510, Currency: "AZN"}})
+	for i, want := range []string{"", "0.00", "35.10"} {
+		if views[i].Price != want {
+			t.Errorf("view %d: got %q, want %q", i, views[i].Price, want)
 		}
 	}
 }

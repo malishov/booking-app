@@ -56,6 +56,9 @@ func NewRouter(logger *slog.Logger, pool *pgxpool.Pool, tmpl *template.Template,
 	r.With(bookingBusinessLimit, bookingIPLimit).Post("/b/{slug}/book", bookingH.Create)
 	r.Get("/b/{slug}/booked/{token}", bookingH.Receipt)
 	r.Get("/booked/{token}", bookingH.Receipt)
+	r.Get("/v2/b/{slug}", bookingH.Page)
+	r.With(bookingBusinessLimit, bookingIPLimit).Post("/v2/b/{slug}/book", bookingH.Create)
+	r.Get("/v2/booked/{token}", bookingH.Receipt)
 	r.With(authH.RequireSession).Get("/cabinet/bookings", bookingH.Cabinet)
 	r.With(authH.RequireSession).Get("/cabinet/bookings/new", bookingH.ManualPage)
 	r.With(authH.RequireSession).Post("/cabinet/bookings/new", bookingH.Create)
@@ -90,6 +93,9 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 
 // Receipt tokens grant access to a confirmation and must never enter logs.
 func requestLogPath(path string) string {
+	if strings.HasPrefix(path, "/v2/booked/") {
+		return "/v2/booked/[redacted]"
+	}
 	if strings.HasPrefix(path, "/booked/") {
 		return "/booked/[redacted]"
 	}

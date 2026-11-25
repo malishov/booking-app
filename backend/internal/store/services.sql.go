@@ -10,17 +10,18 @@ import (
 )
 
 const createService = `-- name: CreateService :one
-INSERT INTO services (business_id, name, duration_minutes, price_cents, currency)
-SELECT id, $2, $3, $4, $5 FROM businesses WHERE owner_user_id = $1
-RETURNING id, business_id, name, duration_minutes, price_cents, is_active, created_at, currency
+INSERT INTO services (business_id, name, duration_minutes, price_cents, currency, price_unspecified)
+SELECT id, $2, $3, $4, $5, $6 FROM businesses WHERE owner_user_id = $1
+RETURNING id, business_id, name, duration_minutes, price_cents, is_active, created_at, currency, price_unspecified
 `
 
 type CreateServiceParams struct {
-	OwnerUserID     int64  `json:"owner_user_id"`
-	Name            string `json:"name"`
-	DurationMinutes int32  `json:"duration_minutes"`
-	PriceCents      int32  `json:"price_cents"`
-	Currency        string `json:"currency"`
+	OwnerUserID      int64  `json:"owner_user_id"`
+	Name             string `json:"name"`
+	DurationMinutes  int32  `json:"duration_minutes"`
+	PriceCents       int32  `json:"price_cents"`
+	Currency         string `json:"currency"`
+	PriceUnspecified bool   `json:"price_unspecified"`
 }
 
 func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (Service, error) {
@@ -30,6 +31,7 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		arg.DurationMinutes,
 		arg.PriceCents,
 		arg.Currency,
+		arg.PriceUnspecified,
 	)
 	var i Service
 	err := row.Scan(
@@ -41,12 +43,13 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.Currency,
+		&i.PriceUnspecified,
 	)
 	return i, err
 }
 
 const getServiceByOwner = `-- name: GetServiceByOwner :one
-SELECT services.id, services.business_id, services.name, services.duration_minutes, services.price_cents, services.is_active, services.created_at, services.currency FROM services
+SELECT services.id, services.business_id, services.name, services.duration_minutes, services.price_cents, services.is_active, services.created_at, services.currency, services.price_unspecified FROM services
 JOIN businesses ON businesses.id = services.business_id
 WHERE services.id = $1 AND businesses.owner_user_id = $2
 `
@@ -68,12 +71,13 @@ func (q *Queries) GetServiceByOwner(ctx context.Context, arg GetServiceByOwnerPa
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.Currency,
+		&i.PriceUnspecified,
 	)
 	return i, err
 }
 
 const listPublicServices = `-- name: ListPublicServices :many
-SELECT id, business_id, name, duration_minutes, price_cents, is_active, created_at, currency FROM services WHERE business_id = $1 AND is_active = true ORDER BY id
+SELECT id, business_id, name, duration_minutes, price_cents, is_active, created_at, currency, price_unspecified FROM services WHERE business_id = $1 AND is_active = true ORDER BY id
 `
 
 func (q *Queries) ListPublicServices(ctx context.Context, businessID int64) ([]Service, error) {
@@ -94,6 +98,7 @@ func (q *Queries) ListPublicServices(ctx context.Context, businessID int64) ([]S
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.Currency,
+			&i.PriceUnspecified,
 		); err != nil {
 			return nil, err
 		}
@@ -106,7 +111,7 @@ func (q *Queries) ListPublicServices(ctx context.Context, businessID int64) ([]S
 }
 
 const listServicesByOwner = `-- name: ListServicesByOwner :many
-SELECT services.id, services.business_id, services.name, services.duration_minutes, services.price_cents, services.is_active, services.created_at, services.currency FROM services
+SELECT services.id, services.business_id, services.name, services.duration_minutes, services.price_cents, services.is_active, services.created_at, services.currency, services.price_unspecified FROM services
 JOIN businesses ON businesses.id = services.business_id
 WHERE businesses.owner_user_id = $1 ORDER BY services.id
 `
@@ -129,6 +134,7 @@ func (q *Queries) ListServicesByOwner(ctx context.Context, ownerUserID int64) ([
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.Currency,
+			&i.PriceUnspecified,
 		); err != nil {
 			return nil, err
 		}
@@ -144,7 +150,7 @@ const toggleService = `-- name: ToggleService :one
 UPDATE services SET is_active = NOT services.is_active
 FROM businesses
 WHERE services.business_id = businesses.id AND businesses.owner_user_id = $2 AND services.id = $1
-RETURNING services.id, services.business_id, services.name, services.duration_minutes, services.price_cents, services.is_active, services.created_at, services.currency
+RETURNING services.id, services.business_id, services.name, services.duration_minutes, services.price_cents, services.is_active, services.created_at, services.currency, services.price_unspecified
 `
 
 type ToggleServiceParams struct {
@@ -164,24 +170,26 @@ func (q *Queries) ToggleService(ctx context.Context, arg ToggleServiceParams) (S
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.Currency,
+		&i.PriceUnspecified,
 	)
 	return i, err
 }
 
 const updateService = `-- name: UpdateService :one
-UPDATE services SET name = $3, duration_minutes = $4, price_cents = $5, currency = $6
+UPDATE services SET name = $3, duration_minutes = $4, price_cents = $5, currency = $6, price_unspecified = $7
 FROM businesses
 WHERE services.business_id = businesses.id AND businesses.owner_user_id = $2 AND services.id = $1
-RETURNING services.id, services.business_id, services.name, services.duration_minutes, services.price_cents, services.is_active, services.created_at, services.currency
+RETURNING services.id, services.business_id, services.name, services.duration_minutes, services.price_cents, services.is_active, services.created_at, services.currency, services.price_unspecified
 `
 
 type UpdateServiceParams struct {
-	ID              int64  `json:"id"`
-	OwnerUserID     int64  `json:"owner_user_id"`
-	Name            string `json:"name"`
-	DurationMinutes int32  `json:"duration_minutes"`
-	PriceCents      int32  `json:"price_cents"`
-	Currency        string `json:"currency"`
+	ID               int64  `json:"id"`
+	OwnerUserID      int64  `json:"owner_user_id"`
+	Name             string `json:"name"`
+	DurationMinutes  int32  `json:"duration_minutes"`
+	PriceCents       int32  `json:"price_cents"`
+	Currency         string `json:"currency"`
+	PriceUnspecified bool   `json:"price_unspecified"`
 }
 
 func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error) {
@@ -192,6 +200,7 @@ func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (S
 		arg.DurationMinutes,
 		arg.PriceCents,
 		arg.Currency,
+		arg.PriceUnspecified,
 	)
 	var i Service
 	err := row.Scan(
@@ -203,6 +212,7 @@ func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (S
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.Currency,
+		&i.PriceUnspecified,
 	)
 	return i, err
 }

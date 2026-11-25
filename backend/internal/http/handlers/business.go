@@ -182,6 +182,9 @@ func redirectBusinessAlias(w http.ResponseWriter, r *http.Request, canonical str
 		return false
 	}
 	target := "/b/" + canonical
+	if strings.HasPrefix(r.URL.Path, "/v2/b/") {
+		target = "/v2" + target
+	}
 	if r.URL.RawQuery != "" {
 		target += "?" + r.URL.RawQuery
 	}

@@ -65,7 +65,7 @@ type servicePageData struct {
 func serviceViews(rows []store.Service) []serviceView {
 	views := make([]serviceView, 0, len(rows))
 	for _, row := range rows {
-		views = append(views, serviceView{ID: row.ID, Name: row.Name, DurationMinutes: row.DurationMinutes, Price: fmt.Sprintf("%d.%02d", row.PriceCents/100, row.PriceCents%100), Currency: row.Currency, IsActive: row.IsActive})
+		views = append(views, serviceView{ID: row.ID, Name: row.Name, DurationMinutes: row.DurationMinutes, Price: servicePrice(row), Currency: row.Currency, IsActive: row.IsActive})
 	}
 	return views
 }
@@ -154,9 +154,9 @@ func (s *Services) Save(w http.ResponseWriter, r *http.Request) {
 	}
 	var err error
 	if editingID == 0 {
-		_, err = s.store.CreateService(r.Context(), store.CreateServiceParams{OwnerUserID: profile.OwnerUserID, Name: form.Name, DurationMinutes: duration, PriceCents: cents, Currency: form.Currency})
+		_, err = s.store.CreateService(r.Context(), store.CreateServiceParams{OwnerUserID: profile.OwnerUserID, Name: form.Name, DurationMinutes: duration, PriceCents: cents, Currency: form.Currency, PriceUnspecified: form.Price == ""})
 	} else {
-		_, err = s.store.UpdateService(r.Context(), store.UpdateServiceParams{ID: editingID, OwnerUserID: profile.OwnerUserID, Name: form.Name, DurationMinutes: duration, PriceCents: cents, Currency: form.Currency})
+		_, err = s.store.UpdateService(r.Context(), store.UpdateServiceParams{ID: editingID, OwnerUserID: profile.OwnerUserID, Name: form.Name, DurationMinutes: duration, PriceCents: cents, Currency: form.Currency, PriceUnspecified: form.Price == ""})
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		http.NotFound(w, r)
@@ -215,15 +215,6 @@ func validateService(form serviceForm) (int32, int32, string) {
 	if err != nil || duration < 1 || duration > 1440 {
 		return 0, 0, "Длительность: целое число от 1 до 1440 минут."
 	}
-	if !pricePattern.MatchString(form.Price) {
-		return 0, 0, "Цена: от 0 до 9999999.99, не более двух знаков после запятой."
-	}
-	parts := strings.Split(strings.ReplaceAll(form.Price, ",", "."), ".")
-	units, _ := strconv.ParseInt(parts[0], 10, 32)
-	var fraction int64
-	if len(parts) == 2 {
-		fraction, _ = strconv.ParseInt(parts[1]+strings.Repeat("0", 2-len(parts[1])), 10, 32)
-	}
 	supported := false
 	for _, currency := range serviceCurrencies {
 		if form.Currency == currency {
@@ -234,5 +225,24 @@ func validateService(form serviceForm) (int32, int32, string) {
 	if !supported {
 		return 0, 0, "Выберите поддерживаемую валюту."
 	}
+	if form.Price == "" {
+		return int32(duration), 0, ""
+	}
+	if !pricePattern.MatchString(form.Price) {
+		return 0, 0, "Цена: от 0 до 9999999.99, не более двух знаков после запятой."
+	}
+	parts := strings.Split(strings.ReplaceAll(form.Price, ",", "."), ".")
+	units, _ := strconv.ParseInt(parts[0], 10, 32)
+	var fraction int64
+	if len(parts) == 2 {
+		fraction, _ = strconv.ParseInt(parts[1]+strings.Repeat("0", 2-len(parts[1])), 10, 32)
+	}
 	return int32(duration), int32(units*100 + fraction), ""
+}
+
+func servicePrice(row store.Service) string {
+	if row.PriceUnspecified {
+		return ""
+	}
+	return fmt.Sprintf("%d.%02d", row.PriceCents/100, row.PriceCents%100)
 }

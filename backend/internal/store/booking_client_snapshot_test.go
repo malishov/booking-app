@@ -64,7 +64,13 @@ func snapshotTestDB(t *testing.T, legacy bool) (context.Context, pgx.Tx, *Querie
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := q.CreateService(ctx, CreateServiceParams{OwnerUserID: owner.ID, Name: "Manicure", DurationMinutes: 60, PriceCents: 3500, Currency: "AZN"})
+	var s Service
+	if legacy {
+		// Exercise the actual old schema rather than using current generated SQL.
+		err = tx.QueryRow(ctx, `INSERT INTO services(business_id,name,duration_minutes,price_cents,currency) VALUES($1,'Manicure',60,3500,'AZN') RETURNING id`, b.ID).Scan(&s.ID)
+	} else {
+		s, err = q.CreateService(ctx, CreateServiceParams{OwnerUserID: owner.ID, Name: "Manicure", DurationMinutes: 60, PriceCents: 3500, Currency: "AZN"})
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,6 +106,31 @@ func TestBookingContactsUpgrade(t *testing.T) {
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO customers(business_id,name,phone) VALUES($1,'Shared phone client','+994500000111')`, b.ID); err != nil {
 		t.Fatalf("shared phone still treated as identity: %v", err)
+	}
+}
+
+func TestUnspecifiedPriceIsSnapshotted(t *testing.T) {
+	ctx, _, q, business, _ := snapshotTestDB(t, false)
+	service, err := q.CreateService(ctx, CreateServiceParams{OwnerUserID: business.OwnerUserID, Name: "Consultation", DurationMinutes: 45, Currency: "AZN", PriceUnspecified: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !service.PriceUnspecified || service.PriceCents != 0 {
+		t.Fatal("unspecified price not persisted")
+	}
+	start := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Minute)
+	if err := q.InsertBooking(ctx, business, service, "Demo client", "+994500000000", "unspecified-test", start); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := q.UpdateService(ctx, UpdateServiceParams{ID: service.ID, OwnerUserID: business.OwnerUserID, Name: service.Name, DurationMinutes: 45, PriceCents: 1200, Currency: "AZN"}); err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := q.GetReceipt(ctx, business.ID, "unspecified-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !receipt.PriceUnspecified || receipt.PriceCents != 0 {
+		t.Fatal("catalog edit changed the booked price state")
 	}
 }
 

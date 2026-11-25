@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -47,6 +48,36 @@ func (b *Booking) renderBooking(w http.ResponseWriter, r *http.Request, data boo
 	name := "online.html"
 	if data.Manual {
 		name = "booking-new.html"
+	} else {
+		name = "online-v2.html"
+		data.EditingService = r.Method == http.MethodGet && r.URL.Query().Get("step") == "service"
+		data.ServiceStep = data.Receipt == nil && (data.Selected == nil || data.EditingService || (r.Method == http.MethodGet && r.URL.Query().Get("service") == "" && data.ReviewTime == ""))
+		if data.ServiceStep {
+			data.ReviewTime = ""
+		}
+
+		data.PublicPath = "/b/" + data.Slug
+		if strings.HasPrefix(r.URL.Path, "/v2/") {
+			data.PublicPath = "/v2/b/" + data.Slug
+		}
+		if start, err := time.Parse(time.RFC3339, data.SelectedTime); err == nil && data.Selected != nil {
+			if loc, err := time.LoadLocation(data.Timezone); err == nil {
+				data.ReviewEnd = start.In(loc).Add(time.Duration(data.Selected.DurationMinutes) * time.Minute).Format("15:04")
+			}
+		}
+		if data.Receipt != nil {
+			if loc, err := time.LoadLocation(data.Timezone); err == nil {
+				data.ReceiptEnd = data.Receipt.End.In(loc).Format("15:04")
+				data.ReceiptShortDate = bookingShortDate(data.Receipt.Start.In(loc), requestLanguage(r))
+			}
+			data.ReceiptStartValue = data.Receipt.Start.UTC().Format("20060102T150405Z")
+			data.ReceiptEndValue = data.Receipt.End.UTC().Format("20060102T150405Z")
+		}
+
+		data.SlotError = data.Error == bookingSlotUnavailable
+		if day, err := time.Parse("2006-01-02", data.Date); err == nil {
+			data.DateLabel = day.Format("02.01.2006")
+		}
 	}
 	renderHTML(w, r, b.tmpl, b.logger, name, data, status)
 }
@@ -117,4 +148,15 @@ func (b *Booking) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, returnURL+"&saved="+status, 303)
+}
+
+func bookingShortDate(at time.Time, language string) string {
+	months := []string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
+	if language == "en" {
+		months = []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+	}
+	if language == "az" {
+		months = []string{"yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avqust", "sentyabr", "oktyabr", "noyabr", "dekabr"}
+	}
+	return strconv.Itoa(at.Day()) + " " + months[int(at.Month())-1]
 }

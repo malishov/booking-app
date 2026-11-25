@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+    {{template "head"}}
+    <link rel="stylesheet" href="/static/booking-v2.css">
+<script src="/static/booking-v2.js" defer></script>
+    <meta name="robots" content="noindex">
+    <title>{{.Name}} — Окно</title>
+</head>
+<body class="booking-v2">
+<header class="v2-header">
+    <span class="v2-brand"><span class="v2-window" aria-hidden="true"></span>Окно</span>
+    <span class="v2-provider">{{.Name}}</span>
+    {{if not .Receipt}}{{template "language-picker"}}{{end}}
+</header>
+<main class="v2-main v2-narrow">
+{{if not .Receipt}}<ol class="v2-steps" aria-label="{{t "Этапы записи"}}"><li {{if .ServiceStep}}aria-current="step"{{end}}><span>1</span>{{t "Услуга"}}</li><li {{if and (not .ServiceStep) (not .ReviewTime)}}aria-current="step"{{end}}><span>2</span>{{t "Дата и время"}}</li><li {{if .ReviewTime}}aria-current="step"{{end}}><span>3</span>{{t "Контакты"}}</li></ol>{{end}}
+{{if .Receipt}}
+<section class="v2-receipt" data-booking-complete="public:{{.Slug}}">
+{{if eq .Receipt.Status "confirmed"}}
+<header class="v2-success"><div class="v2-emblem" aria-hidden="true"><span class="v2-card-back"></span><span class="v2-card-front"><svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="17"/><path d="m16 24 6 6 11-13"/></svg></span></div><h1>{{t "Готово! Вы записаны"}}</h1><p>{{.ReceiptShortDate}} · {{.ReceiptTime}}</p></header>
+{{else}}<h1>{{if eq .Receipt.Status "cancelled"}}{{t "Запись отменена."}}{{else if eq .Receipt.Status "completed"}}{{t "Этот визит завершён."}}{{else}}{{t "Не пришёл"}}{{end}}</h1><p class="field-hint">{{t "Свяжитесь с мастером, чтобы выбрать другое время."}}</p>{{end}}
+<div class="v2-receipt-card"><h2>{{.Name}}</h2><dl><div><dt>{{t "Когда"}}</dt><dd>{{.ReceiptDate}} · {{.ReceiptTime}}–{{.ReceiptEnd}}<small>{{.TimezoneDisplay}}</small></dd></div><div><dt>{{t "Услуга"}}</dt><dd>{{.Receipt.ServiceName}}<small>{{.Receipt.Duration}} {{t "мин"}}{{if not .Receipt.PriceUnspecified}} · {{.ReceiptPrice}} {{.Receipt.Currency}}{{end}}</small></dd></div></dl></div>
+{{if eq .Receipt.Status "confirmed"}}<button type="button" class="v2-action" data-save-calendar data-start="{{.ReceiptStartValue}}" data-end="{{.ReceiptEndValue}}" data-title="{{.Receipt.ServiceName}}" data-provider="{{.Name}}" hidden>{{t "Добавить в календарь"}}</button>{{end}}
+<div class="v2-save-link"><div data-link-fallback hidden><label for="receipt-link">{{t "Персональная ссылка на запись"}}</label><input id="receipt-link" readonly data-receipt-link></div><button type="button" class="v2-secondary" data-copy-receipt data-success="{{t "Ссылка скопирована"}}" data-failure="{{t "Скопируйте ссылку из поля выше"}}" hidden>{{t "Сохранить ссылку"}}</button><p class="field-hint">{{t "Сохраните адрес этой страницы. Ссылка открывает детали вашей встречи."}}</p><p role="status" data-copy-status></p></div>
+<a class="v2-back" href="{{.PublicPath}}">← {{t "На страницу мастера"}}</a></section>
+{{else if .ReviewTime}}
+    <a class="v2-back" href="{{.PublicPath}}?service={{.SelectedID}}&amp;date={{.Date}}&amp;previous_time={{.SelectedTime}}#booking-slots">← {{t "Выберите другое время"}}</a>
+    <h1>{{t "Ваши контакты"}}</h1>
+    <div class="v2-summary">
+        <strong>{{.Selected.Name}}</strong>
+        <span>{{.DateLabel}} · {{.ReviewTime}}–{{.ReviewEnd}} ({{.TimezoneDisplay}})</span>
+        <span>{{.Selected.DurationMinutes}} {{t "мин"}}{{if .Selected.Price}} · {{.Selected.Price}} {{.Selected.Currency}}{{end}}</span>
+    </div>
+    {{if and .Error (not .ClientErrorField)}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
+    <form method="post" action="{{.PublicPath}}/book" data-booking-draft="public:{{.Slug}}">
+        <input type="hidden" name="service" value="{{.SelectedID}}">
+        <input type="hidden" name="date" value="{{.Date}}">
+        <input type="hidden" name="time" value="{{.SelectedTime}}">
+        <div class="booking-contact-fields"><div class="field"><label for="client-name">{{t "Ваше имя"}}</label><input id="client-name" name="client_name" value="{{.ClientName}}" autocomplete="name" minlength="2" maxlength="100" required {{if eq .ClientErrorField "name"}}aria-invalid="true" aria-describedby="client-name-error"{{end}}>{{if eq .ClientErrorField "name"}}<p class="error" role="alert" id="client-name-error">{{t .Error}}</p>{{end}}</div><div class="field"><label for="client-phone">{{t "Телефон"}}</label><input type="tel" id="client-phone" name="phone" value="{{.Phone}}" autocomplete="tel" maxlength="30" placeholder="+994 50 123 45 67" required {{if eq .ClientErrorField "phone"}}aria-invalid="true" aria-describedby="client-phone-error"{{end}}>{{if eq .ClientErrorField "phone"}}<p class="error" role="alert" id="client-phone-error">{{t .Error}}</p>{{end}}</div></div>
+        <p class="field-hint">{{t "Имя и телефон нужны мастеру для связи по вашей записи."}}</p>
+        <button class="v2-action" type="submit">{{t "Подтвердить запись"}}</button>
+    </form>
+{{else}}
+    <div class="v2-profile"><h1>{{.Name}}</h1>{{if and .Description .ServiceStep}}<p>{{.Description}}</p>{{end}}<small>{{.TimezoneDisplay}}</small></div>
+    {{if and .Error (not .SlotError)}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
+    {{if .Services}}
+    {{if .ServiceStep}}
+    <section aria-labelledby="v2-service-title">
+        <h2 id="v2-service-title">{{t "Выберите услугу"}}</h2>
+        <form method="get" action="{{.PublicPath}}" class="v2-service-step">
+            {{if .EditingService}}<input type="hidden" name="date" value="{{.Date}}">{{end}}
+            {{if .SelectedTime}}<input type="hidden" name="previous_time" value="{{.SelectedTime}}">{{end}}
+            <fieldset class="v2-service-options"><legend class="sr-only">{{t "Услуга"}}</legend>
+            {{range .Services}}<label class="v2-service-choice"><input type="radio" name="service" value="{{.ID}}" required {{if eq .ID $.SelectedID}}checked{{end}}><span><strong>{{.Name}}</strong><small>{{.DurationMinutes}} {{t "мин"}}{{if .Price}} · {{.Price}} {{.Currency}}{{end}}</small></span></label>{{end}}
+            </fieldset>
+            <button type="submit" class="v2-action">{{t "Выбрать время"}}</button>
+        </form>
+    </section>
+    {{else}}
+        {{if .Selected}}<div class="v2-chosen-service"><div><strong>{{.Selected.Name}}</strong><small>{{.Selected.DurationMinutes}} {{t "мин"}}{{if .Selected.Price}} · {{.Selected.Price}} {{.Selected.Currency}}{{end}}</small></div><a href="{{.PublicPath}}?step=service&amp;service={{.SelectedID}}&amp;date={{.Date}}&amp;previous_time={{.SelectedTime}}" data-edit-service>{{t "Изменить"}}</a></div>{{end}}
+        <h2>{{t "Выберите дату и время"}}</h2>
+            {{if .Calendar}}<div class="v2-date-tools" hidden data-date-tools data-date="{{.Date}}" data-min="{{.MinDate}}" data-max="{{.MaxDate}}" data-path="{{.PublicPath}}" data-service="{{.SelectedID}}" data-close-label="{{t "Закрыть календарь"}}" data-count-label="{{t "Окон"}}" data-empty-label="{{t "Нет мест"}}" data-prev-label="{{t "Предыдущие дни"}}" data-next-label="{{t "Следующие дни"}}" data-open-label="{{t "Календарь месяца"}}" data-nearest-label="{{t "Ближайшее время"}}"></div><section class="booking-calendar" id="booking-calendar" aria-labelledby="calendar-title"><div class="calendar-heading"><h3 id="calendar-title">{{t "Выберите день"}}</h3><div class="calendar-navigation" hidden><button type="button" data-calendar-prev aria-label="{{t "Предыдущий месяц"}}">←</button><button type="button" data-calendar-next aria-label="{{t "Следующий месяц"}}">→</button></div></div><p class="calendar-service-note">{{t "Доступность зависит от длительности выбранной услуги."}}</p><form method="get" action="{{.PublicPath}}#booking-slots"><input type="hidden" name="service" value="{{.SelectedID}}">{{range .Calendar}}<section class="calendar-month" data-selected="{{.Selected}}"><h4>{{t .Name}} {{.Year}}</h4><div class="calendar-weekdays" aria-hidden="true"><span>{{t "Пн"}}</span><span>{{t "Вт"}}</span><span>{{t "Ср"}}</span><span>{{t "Чт"}}</span><span>{{t "Пт"}}</span><span>{{t "Сб"}}</span><span>{{t "Вс"}}</span></div><div class="calendar-grid">{{range .Days}}{{if .Number}}<button type="submit" name="date" value="{{.Date}}" data-count="{{.Count}}" class="calendar-day {{if .Available}}calendar-available{{end}} {{if .Selected}}calendar-selected{{end}} {{if .Today}}calendar-today{{end}}" {{if not .Available}}disabled{{end}} {{if .Selected}}aria-current="date"{{end}} aria-label="{{.Label}} — {{if .Available}}{{t "Есть свободное время"}}{{else}}{{t "Нет свободного времени"}}{{end}}"><span>{{.Number}}</span>{{if .Available}}<i aria-hidden="true"></i>{{end}}</button>{{else}}<span class="calendar-blank" aria-hidden="true"></span>{{end}}{{end}}</div></section>{{end}}</form><div class="calendar-legend"><span><i class="calendar-legend-dot"></i>{{t "Есть свободное время"}}</span><span><i class="calendar-legend-dot calendar-legend-closed"></i>{{t "Нет свободного времени"}}</span></div></section>{{end}}
+            {{if .Selected}}
+            <section id="booking-slots" class="v2-times">
+                <h2>{{t "Свободные окна"}} · <time datetime="{{.Date}}">{{.DateLabel}}</time></h2>
+                <p class="field-hint">{{.TimezoneDisplay}}</p>
+                {{if .SlotError}}<div class="error" role="alert">{{t .Error}}</div>{{end}}
+                {{if .Slots}}
+                <form method="get" action="{{.PublicPath}}" data-slot-form>
+                    <input type="hidden" name="service" value="{{.SelectedID}}">
+                    <input type="hidden" name="date" value="{{.Date}}">
+                    <div class="v2-periods" hidden data-periods aria-label="{{t "Время суток"}}" data-morning="{{t "Утро"}}" data-day="{{t "День"}}" data-evening="{{t "Вечер"}}" data-empty="{{t "Нет мест"}}"></div><fieldset class="booking-slot-options" id="available-times">
+                        <legend class="sr-only">{{t "Свободные окна"}}</legend>
+                        {{range .Slots}}
+                        <label class="booking-slot"><input type="radio" name="time" value="{{.Value}}" {{if eq .Value $.SelectedTime}}checked{{end}} required><span>{{.Label}}</span></label>
+                        {{end}}
+                    </fieldset>
+                    <button class="v2-secondary v2-more" type="button" data-more-slots data-more="{{t "Показать ещё"}}" data-less="{{t "Свернуть"}}" aria-controls="available-times" aria-expanded="false" hidden></button><p class="field-hint" role="status" data-selected-time data-label="{{t "Выбрано"}}"></p><button class="v2-action" type="submit">{{t "Продолжить"}}</button>
+                </form>
+                {{else}}
+                <p>{{t "На эту дату свободных окон нет."}}</p>
+                <p>{{t "Попробуйте другой день или другую услугу."}}</p>
+                {{end}}
+            </section>
+            {{end}}
+    {{end}}
+    {{else}}
+    <p>{{t "Мастер пока не добавил услуги."}}</p>
+    {{end}}
+{{end}}
+</main>
+</body>
+</html>

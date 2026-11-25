@@ -12,12 +12,12 @@ JOIN businesses ON businesses.id = services.business_id
 WHERE services.id = $1 AND businesses.owner_user_id = $2;
 
 -- name: CreateService :one
-INSERT INTO services (business_id, name, duration_minutes, price_cents, currency)
-SELECT id, $2, $3, $4, $5 FROM businesses WHERE owner_user_id = $1
+INSERT INTO services (business_id, name, duration_minutes, price_cents, currency, price_unspecified)
+SELECT id, $2, $3, $4, $5, $6 FROM businesses WHERE owner_user_id = $1
 RETURNING *;
 
 -- name: UpdateService :one
-UPDATE services SET name = $3, duration_minutes = $4, price_cents = $5, currency = $6
+UPDATE services SET name = $3, duration_minutes = $4, price_cents = $5, currency = $6, price_unspecified = $7
 FROM businesses
 WHERE services.business_id = businesses.id AND businesses.owner_user_id = $2 AND services.id = $1
 RETURNING services.*;

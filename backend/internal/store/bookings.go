@@ -26,7 +26,7 @@ func (q *Queries) ChangeBookingStatus(ctx context.Context, owner, id int64, stat
 }
 
 func (q *Queries) ListManagedBookings(ctx context.Context, owner int64, filter string, now, today, tomorrow time.Time) ([]BookingView, error) {
-	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status,i.price_unspecified
  FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN booking_items i ON i.booking_id=b.id
  WHERE p.owner_user_id=$1 AND (
  ($2='today' AND b.starts_at>=$4 AND b.starts_at<$5) OR
@@ -40,7 +40,7 @@ func (q *Queries) ListManagedBookings(ctx context.Context, owner int64, filter s
 	result := []BookingView{}
 	for rows.Next() {
 		var v BookingView
-		if err := rows.Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status); err != nil {
+		if err := rows.Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status, &v.PriceUnspecified); err != nil {
 			return nil, err
 		}
 		result = append(result, v)
@@ -50,6 +50,7 @@ func (q *Queries) ListManagedBookings(ctx context.Context, owner int64, filter s
 
 type BusyInterval struct{ Start, End time.Time }
 type BookingView struct {
+	PriceUnspecified                           bool
 	ID                                         int64
 	Start, End                                 time.Time
 	Name, Phone, ServiceName, Currency, Status string
@@ -57,7 +58,7 @@ type BookingView struct {
 }
 
 func (q *Queries) ListOwnerDayBookings(ctx context.Context, owner int64, start, end time.Time) ([]BookingView, error) {
-	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status,i.price_unspecified
  FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN booking_items i ON i.booking_id=b.id
  WHERE p.owner_user_id=$1 AND b.starts_at<$3 AND b.ends_at>$2 ORDER BY b.starts_at,b.id`, owner, start, end)
 	if err != nil {
@@ -67,7 +68,7 @@ func (q *Queries) ListOwnerDayBookings(ctx context.Context, owner int64, start, 
 	result := []BookingView{}
 	for rows.Next() {
 		var v BookingView
-		if err := rows.Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status); err != nil {
+		if err := rows.Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status, &v.PriceUnspecified); err != nil {
 			return nil, err
 		}
 		result = append(result, v)
@@ -101,10 +102,10 @@ func (q *Queries) ListBusyExcept(ctx context.Context, business int64, start, end
 
 func (q *Queries) GetOwnerBooking(ctx context.Context, owner, id int64) (BookingView, error) {
 	var v BookingView
-	err := q.db.QueryRow(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+	err := q.db.QueryRow(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status,i.price_unspecified
  FROM bookings b JOIN businesses p ON p.id=b.business_id JOIN booking_items i ON i.booking_id=b.id
  WHERE p.owner_user_id=$1 AND b.id=$2`, owner, id).
-		Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status)
+		Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status, &v.PriceUnspecified)
 	return v, err
 }
 
@@ -162,19 +163,19 @@ func (q *Queries) InsertBooking(ctx context.Context, b Business, s Service, name
 	if err != nil {
 		return err
 	}
-	_, err = q.db.Exec(ctx, `INSERT INTO booking_items(booking_id,service_id,service_name,price_cents,duration_minutes,currency)
- VALUES($1,$2,$3,$4,$5,$6)`, booking, s.ID, s.Name, s.PriceCents, s.DurationMinutes, s.Currency)
+	_, err = q.db.Exec(ctx, `INSERT INTO booking_items(booking_id,service_id,service_name,price_cents,duration_minutes,currency,price_unspecified)
+ VALUES($1,$2,$3,$4,$5,$6,$7)`, booking, s.ID, s.Name, s.PriceCents, s.DurationMinutes, s.Currency, s.PriceUnspecified)
 	return err
 }
 func (q *Queries) GetReceipt(ctx context.Context, business int64, hash string) (BookingView, error) {
 	var v BookingView
-	err := q.db.QueryRow(ctx, `SELECT b.id,b.starts_at,b.ends_at,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+	err := q.db.QueryRow(ctx, `SELECT b.id,b.starts_at,b.ends_at,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status,i.price_unspecified
  FROM bookings b JOIN booking_items i ON i.booking_id=b.id WHERE b.business_id=$1 AND b.receipt_hash=$2`, business, hash).
-		Scan(&v.ID, &v.Start, &v.End, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status)
+		Scan(&v.ID, &v.Start, &v.End, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status, &v.PriceUnspecified)
 	return v, err
 }
 func (q *Queries) ListOwnerBookings(ctx context.Context, owner int64) ([]BookingView, error) {
-	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status
+	rows, err := q.db.Query(ctx, `SELECT b.id,b.starts_at,b.ends_at,b.client_name,b.client_phone,i.service_name,i.price_cents,i.duration_minutes,i.currency,b.status,i.price_unspecified
  FROM bookings b JOIN businesses p ON p.id=b.business_id
  JOIN booking_items i ON i.booking_id=b.id WHERE p.owner_user_id=$1 ORDER BY b.starts_at DESC LIMIT 200`, owner)
 	if err != nil {
@@ -184,7 +185,7 @@ func (q *Queries) ListOwnerBookings(ctx context.Context, owner int64) ([]Booking
 	result := []BookingView{}
 	for rows.Next() {
 		var v BookingView
-		if err := rows.Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status); err != nil {
+		if err := rows.Scan(&v.ID, &v.Start, &v.End, &v.Name, &v.Phone, &v.ServiceName, &v.PriceCents, &v.Duration, &v.Currency, &v.Status, &v.PriceUnspecified); err != nil {
 			return nil, err
 		}
 		result = append(result, v)

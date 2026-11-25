@@ -30,13 +30,21 @@ func NewBooking(p *pgxpool.Pool, t *template.Template, l *slog.Logger) *Booking 
 	return &Booking{p, t, l}
 }
 
+const bookingSlotUnavailable = "Это время уже недоступно. Выберите другое окно."
+
 type bookingPageData struct {
+	ServiceStep, EditingService        bool
+	SlotError                          bool
+	PublicPath, ReviewEnd, ReceiptEnd  string
+	ReceiptStartValue, ReceiptEndValue string
+	ReceiptShortDate                   string
 	businessForm
 	Manual                                                         bool
 	Email                                                          string
 	TimezoneDisplay                                                string
 	Services                                                       []serviceView
 	SelectedID                                                     int64
+	ReviewTime, DateLabel, ClientErrorField                        string
 	Date, MinDate, MaxDate, Error, ClientName, Phone, SelectedTime string
 	Slots                                                          []bookingSlot
 	Calendar                                                       []calendarMonth
@@ -160,8 +168,37 @@ func (b *Booking) Page(w http.ResponseWriter, r *http.Request) {
 	if data.Error != "" {
 		status = 400
 	}
-	renderHTML(w, r, b.tmpl, b.logger, "online.html", data, status)
+	if status == 200 {
+		if selected := r.URL.Query().Get("time"); selected != "" && !data.reviewSlot(selected) {
+			data.Error = bookingSlotUnavailable
+			status = http.StatusConflict
+		}
+	}
+
+	// A previous selection is only a convenience: revalidate against this service's
+	// current availability, without turning an invalid old choice into an error.
+	if status == http.StatusOK && r.URL.Query().Get("time") == "" {
+		data.reviewSlot(r.URL.Query().Get("previous_time"))
+		data.ReviewTime = ""
+	}
+	b.renderBooking(w, r, data, status)
 }
+func (data *bookingPageData) reviewSlot(value string) bool {
+	for _, slot := range data.Slots {
+		if slot.Value == value {
+			data.SelectedTime = value
+			data.ReviewTime = slot.Label
+			if start, err := time.Parse(time.RFC3339, slot.Value); err == nil {
+				if loc, err := time.LoadLocation(data.Timezone); err == nil {
+					data.TimezoneDisplay = bookingTimezoneLabel(data.Timezone, start.In(loc))
+				}
+			}
+			return true
+		}
+	}
+	return false
+}
+
 func normalizeClient(name, phone string) (string, string, string) {
 	name = strings.TrimSpace(name)
 	if utf8.RuneCountInString(name) < 2 || utf8.RuneCountInString(name) > 100 {
@@ -238,9 +275,17 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if message == "" && !found {
-		message = "Это время уже недоступно. Выберите другое окно."
+		message = bookingSlotUnavailable
 	}
 	if message != "" {
+		if !data.Manual && data.Error == "" && found {
+			data.reviewSlot(data.SelectedTime)
+			if strings.HasPrefix(message, "Введите телефон") {
+				data.ClientErrorField = "phone"
+			} else {
+				data.ClientErrorField = "name"
+			}
+		}
 		data.Error = message
 		b.renderBooking(w, r, data, 400)
 		return
@@ -273,8 +318,18 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 		var pe *pgconn.PgError
 		if errors.As(err, &pe) && pe.Code == "23P01" {
 			_ = tx.Rollback(r.Context())
-			data.Error = "Это время уже недоступно. Выберите другое окно."
-			data.Slots = nil
+			data.Error = bookingSlotUnavailable
+			if !data.Manual {
+				refreshed, refreshErr := b.data(r, store.New(b.pool), profile)
+				if refreshErr != nil {
+					b.fail(w, r, refreshErr)
+					return
+				}
+				refreshed.Error, refreshed.ClientName, refreshed.Phone = data.Error, data.ClientName, data.Phone
+				data = refreshed
+			} else {
+				data.Slots = nil
+			}
 			b.renderBooking(w, r, data, 409)
 			return
 		}
@@ -287,6 +342,10 @@ func (b *Booking) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if data.Manual {
 		http.Redirect(w, r, "/cabinet/bookings?filter=upcoming&saved=created", 303)
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, "/v2/") {
+		http.Redirect(w, r, "/v2/booked/"+token, 303)
 		return
 	}
 	http.Redirect(w, r, "/booked/"+token, 303)
@@ -321,7 +380,7 @@ func (b *Booking) Receipt(w http.ResponseWriter, r *http.Request) {
 	data := bookingPageData{businessForm: businessForm{Name: p.Name, Slug: p.Slug, Timezone: p.Timezone}, Receipt: &receipt, ReceiptDate: receipt.Start.In(loc).Format("02.01.2006"), ReceiptTime: receipt.Start.In(loc).Format("15:04"), ReceiptPrice: fmt.Sprintf("%d.%02d", receipt.PriceCents/100, receipt.PriceCents%100)}
 	data.TimezoneDisplay = bookingTimezoneLabel(p.Timezone, receipt.Start.In(loc))
 	w.Header().Set("Referrer-Policy", "no-referrer")
-	renderHTML(w, r, b.tmpl, b.logger, "online.html", data, 200)
+	b.renderBooking(w, r, data, 200)
 }
 
 type ownerBookingView struct {
