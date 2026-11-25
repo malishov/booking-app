@@ -23,3 +23,12 @@ The latest concept includes a demo portrait, a three-step flow (service → date
 The latest visual concept is not yet transferred into the application templates. The working application already contains the earlier booking redesign, separate service/time steps, calendar and compact slot selection, confirmation actions and optional service prices. Its implementation notes are in `../changes/2026-11-21/README.md`.
 
 Next session: review the latest desktop/mobile concept, then transfer the approved changes into the application.
+
+## Референсы дизайна
+
+Ссылки проверены 25 ноября 2026 года. Это опубликованные дизайн-концепции на Dribbble; используем их как ориентиры для собственного интерфейса.
+
+- [Schedulo — Mobile Service Booking: Home Page & Select Service](https://dribbble.com/shots/27497337-Schedulo-Mobile-Service-Booking-Home-Page-Select-Service), Fikri Studio. Берём структуру пошаговой мобильной записи, видимый прогресс и сфокусированные экраны. В нашей версии: услуга → дата и время → контакты. Для самостоятельного мастера отдельный выбор сотрудника не нужен; главным лицом страницы становится мастер с фото.
+- [Atelier Studio — From Booking to Beautifully Confirmed](https://dribbble.com/shots/27834882-Atelier-Studio-Beauty-Salon-Self-care-Designed-Better), Shreyash Barot. Ориентир для финальных шагов: форма контактов, проверка деталей визита, понятное подтверждение и добавление в календарь.
+
+Собственные решения проекта: мягкая шалфейная палитра, молочный фон, необязательная цена услуги и Inter. Точный шрифт Schedulo не установлен; Inter выбран пользователем после сравнения вариантов, а не подтверждён как шрифт оригинала.
